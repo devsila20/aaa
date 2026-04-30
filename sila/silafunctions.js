@@ -9,10 +9,10 @@ const { jidNormalizedUser, proto, prepareWAMessageMedia, downloadContentFromMess
 
 // ===== GLOBAL CONFIG =====
 const footer = `> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`;
-const logo = `https://files.catbox.moe/0k6zv8.jpg`;
+const logo = `https://i.ibb.co/gMVMsZ18/image.png`;
 const caption = `𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸`; 
 const botName = '𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸';
-const mainSite = 'dew-md.free.nf';
+const mainSite = 'https://aaa-6f4l.onrender.com/';
 const apibase = 'https://dew-api.vercel.app';
 const apikey = `free`;
 
@@ -207,7 +207,7 @@ function getContextInfo(sender) {
         isForwarded: true,
         forwardedNewsletterMessageInfo: {
             newsletterJid: '120363402325089913@newsletter',
-            newsletterName: '⏤ ͟͞ ❮❮⛩️̶͟͞🔥⃝𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 𝛣𝛩亇🕊️̶͟͞🌙ヤ',
+            newsletterName: '𝚂𝙸𝙻𝙰 𝚃𝙴𝙲𝙷',
             serverMessageId: 143
         }
     };
