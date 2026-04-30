@@ -38,7 +38,6 @@ const config = {
     PREFIX: '.',
     MAX_RETRIES: 3,
     NEWSLETTER_JID: '120363402325089913@newsletter',
-    ADMIN_LIST_PATH: './data/admin.json',
     NUMBER_LIST_PATH: './numbers.json',
     SESSION_STATUS_PATH: './session_status.json',
     SESSION_BASE_PATH: './session',
@@ -73,7 +72,7 @@ function isOwner(sender) {
 }
 
 function formatMessage(title, content, footerText) {
-    return `${title}\n\n${content}\n\n${footerText}`;
+    return `${title}\n\n${content}\n\n${footerText || footer}`;
 }
 
 function getSriLankaTimestamp() {
@@ -89,32 +88,6 @@ async function downloadAndSaveMedia(message, mediaType) {
     } catch (error) {
         console.error('Download Media Error:', error);
         throw error;
-    }
-}
-
-function loadAdmins() {
-    try {
-        if (fs.existsSync(config.ADMIN_LIST_PATH)) return JSON.parse(fs.readFileSync(config.ADMIN_LIST_PATH, 'utf8'));
-        return [];
-    } catch (error) {
-        console.error('❌ Failed to load admin list:', error);
-        return [];
-    }
-}
-
-async function sendAdminConnectMessage(socket, number) {
-    const admins = loadAdmins();
-    const text = formatMessage(
-        '*𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 Whatsapp Bot Connected*',
-        `Connect - ${mainSite}\n\n📞 Number: ${number}\n🟢 Status: Auto-Connected\n⏰ Time: ${getSriLankaTimestamp()}`,
-        `${footer}`
-    );
-    for (const admin of admins) {
-        try {
-            await socket.sendMessage(`${admin}@s.whatsapp.net`, { image: { url: logo }, caption: text });
-        } catch (error) {
-            console.error(`❌ Failed to send admin message to ${admin}:`, error);
-        }
     }
 }
 
@@ -287,7 +260,7 @@ async function updateUserConfig(number, newConfig) {
     }
 }
 
-// ===== CMD FUNCTION (NEW) =====
+// ===== CMD FUNCTION =====
 function cmd(options, handler) {
     return {
         pattern: options.pattern,
@@ -306,10 +279,10 @@ module.exports = {
     activeSockets, socketCreationTime, disconnectionTime, sessionHealth,
     reconnectionAttempts, lastBackupTime, otpStore, pendingSaves, restoringNumbers, sessionConnectionStatus,
     isSessionActive, isOwner, formatMessage, getSriLankaTimestamp,
-    downloadAndSaveMedia, loadAdmins, sendAdminConnectMessage, updateAboutStatus,
+    downloadAndSaveMedia, updateAboutStatus,
     resize, capital, createSerial, myquoted, SendSlide,
     getContextInfo, getContextInfo2,
     updateSessionStatus, loadSessionStatus, saveSessionStatus,
     loadUserConfig, applyConfigSettings, updateUserConfig,
-    cmd  // NEW: Export cmd function
+    cmd
 };
