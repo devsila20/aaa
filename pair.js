@@ -40,7 +40,7 @@ const {
     activeSockets, socketCreationTime, disconnectionTime, sessionHealth,
     reconnectionAttempts, lastBackupTime, otpStore, pendingSaves, restoringNumbers, sessionConnectionStatus,
     isSessionActive, isOwner, formatMessage, getSriLankaTimestamp,
-    downloadAndSaveMedia, loadAdmins, sendAdminConnectMessage, updateAboutStatus,
+    downloadAndSaveMedia, updateAboutStatus,
     resize, capital, createSerial, myquoted, SendSlide,
     getContextInfo, getContextInfo2,
     updateSessionStatus, loadSessionStatus, saveSessionStatus,
@@ -97,16 +97,29 @@ function loadCommands() {
         return;
     }
 
+    commands.clear();
     const files = fs.readdirSync(commandsDir).filter(f => f.endsWith('.js'));
+    
     for (const file of files) {
-        const cmdName = file.replace('.js', '');
         try {
             const cmdPath = path.join(commandsDir, file);
             delete require.cache[require.resolve(cmdPath)];
-            commands.set(cmdName, require(cmdPath));
-            console.log(`✅ Loaded command: ${cmdName}`);
+            const cmdModule = require(cmdPath);
+            
+            if (cmdModule && cmdModule.pattern) {
+                commands.set(cmdModule.pattern, cmdModule);
+                
+                // Register aliases
+                if (cmdModule.alias && Array.isArray(cmdModule.alias)) {
+                    cmdModule.alias.forEach(alias => {
+                        commands.set(alias, cmdModule);
+                    });
+                }
+                
+                console.log(`✅ Loaded command: ${cmdModule.pattern}`);
+            }
         } catch (e) {
-            console.error(`❌ Failed to load command ${cmdName}:`, e.message);
+            console.error(`❌ Failed to load command ${file}:`, e.message);
         }
     }
     console.log(`📦 Total commands loaded: ${commands.size}`);
@@ -737,38 +750,26 @@ function setupCommandHandlers(socket, number) {
 
         if (!command) return;
 
-        // Reload commands dynamically (for hot-reload during development)
+        // Reload commands dynamically
         if (process.env.NODE_ENV !== 'production') {
             loadCommands();
         }
 
-        // Execute command from silatech/ folder
-        const cmdFunc = commands.get(command);
-        if (cmdFunc) {
+        // Find and execute command
+        const cmdModule = commands.get(command);
+        if (cmdModule && typeof cmdModule.handler === 'function') {
             try {
-                await cmdFunc(socket, msg, sender, args, prefix, number);
+                await cmdModule.handler(socket, m, sender, args, prefix, number);
             } catch (error) {
                 console.error(`❌ Command '${command}' error:`, error);
                 await socket.sendMessage(sender, {
                     image: { url: logo },
-                    caption: formatMessage('❌ COMMAND ERROR', `Error in .${command}\n\n${error.message}`, footer)
+                    caption: formatMessage('❌ COMMAND ERROR', `Error in .${command}\n\n${error.message}`)
                 });
             }
-            return;
+        } else {
+            console.log(`⚠️ Unknown command: ${command}`);
         }
-
-        // Fallback: handle fb_dl, xvdlsd, xvdlhd, downloadvid, downloaddoc (button callbacks)
-        if (['fb_dl', 'xvdlsd', 'xvdlhd', 'downloadvid', 'downloaddoc'].includes(command)) {
-            const btnCmd = commands.get(command);
-            if (btnCmd) {
-                try { await btnCmd(socket, msg, sender, args, prefix, number); } 
-                catch (e) { console.error(`Button callback ${command} error:`, e); }
-            }
-            return;
-        }
-
-        // Unknown command - silent fail or send help
-        console.log(`⚠️ Unknown command: ${command}`);
     });
 }
 
@@ -932,16 +933,15 @@ async function EmpirePair(number, res) {
                     disconnectionTime.delete(sanitizedNumber);
                     restoringNumbers.delete(sanitizedNumber);
 
+                    // Send welcome message to user only (NO admin notifications)
                     await socket.sendMessage(userJid, {
                         image: { url: logo },
                         caption: formatMessage(
                             '*𝚂𝙸𝙻𝙰-𝙼𝙳-Whatsapp Bot*',
-                            `Connect - ${mainSite}\n🤖 Auto-connected successfully!\n\n🔢 Number: ${sanitizedNumber}\n🍁 Channel: Auto-followed\n🔄 Auto-Reconnect: Active\n🧹 Auto-Cleanup: Inactive Sessions\n☁️ Storage: MongoDB (${mongoConnected ? 'Connected' : 'Connecting...'})\n📋 Pending Saves: ${pendingSaves.size}\n\n📋 Commands:\n📌${config.PREFIX}alive - Session status\n📌${config.PREFIX}menu - Show all commands`,
-                            `${footer}`
+                            `Connect - ${mainSite}\n🤖 Auto-connected successfully!\n\n🔢 Number: ${sanitizedNumber}\n🍁 Channel: Auto-followed\n🔄 Auto-Reconnect: Active\n🧹 Auto-Cleanup: Inactive Sessions\n☁️ Storage: MongoDB (${mongoConnected ? 'Connected' : 'Connecting...'})\n📋 Pending Saves: ${pendingSaves.size}\n\n📋 Commands:\n📌${config.PREFIX}alive - Session status\n📌${config.PREFIX}menu - Show all commands`
                         )
                     });
 
-                    await sendAdminConnectMessage(socket, sanitizedNumber);
                     await updateSessionStatus(sanitizedNumber, 'active', new Date().toISOString());
                     await updateSessionStatusInMongoDB(sanitizedNumber, 'active', 'active');
 
@@ -1214,6 +1214,7 @@ console.log(`📊 Configuration loaded:
   - Max reconnect attempts: ${config.MAX_FAILED_ATTEMPTS}
   - Pending Saves: ${pendingSaves.size}
   - Commands: ${commands.size} loaded from silatech/
+  - Admin Notifications: DISABLED
 `);
 
 module.exports = router;
