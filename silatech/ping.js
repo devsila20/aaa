@@ -1,12 +1,19 @@
-const { footer } = require('../sila/silafunctions');
+const { cmd, footer } = require('../sila/silafunctions');
 
-module.exports = async function(socket, msg, sender, args, prefix) {
+module.exports = cmd({
+    pattern: "ping",
+    alias: ["speed", "pong", "latency"],
+    react: "⚡",
+    desc: "Check bot speed/latency",
+    category: "system",
+    filename: __filename
+}, async (sock, m, sender, args, prefix, number) => {
     const start = Date.now();
-    const tempMsg = await socket.sendMessage(sender, { text: '```Pinging...```' });
+    const tempMsg = await sock.sendMessage(sender, { text: '```Pinging...```' });
     const end = Date.now();
     const ping = end - start;
-    await socket.sendMessage(sender, {
+    await sock.sendMessage(sender, {
         text: `*♻️ Speed... : ${ping} ms*`,
         edit: tempMsg.key
     });
-};
+});
