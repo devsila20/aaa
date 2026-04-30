@@ -1,8 +1,15 @@
-const { socketCreationTime, footer, logo, botName, config, loadUserConfig } = require('../sila/silafunctions');
+const { cmd, socketCreationTime, footer, logo, botName, config, loadUserConfig } = require('../sila/silafunctions');
 
-module.exports = async function(socket, msg, sender, args, prefix, number) {
+module.exports = cmd({
+    pattern: "menu",
+    alias: ["help", "list", "commands", "cmd"],
+    react: "📋",
+    desc: "Show all bot commands",
+    category: "system",
+    filename: __filename
+}, async (sock, m, sender, args, prefix, number) => {
     try {
-        await socket.sendMessage(sender, { react: { text: "📋", key: msg.key } });
+        await sock.sendMessage(sender, { react: { text: "📋", key: m.key } });
     } catch(e){}
 
     try {
@@ -14,7 +21,6 @@ module.exports = async function(socket, msg, sender, args, prefix, number) {
 
         let userCfg = {};
         try { userCfg = await loadUserConfig(number) || {}; } catch(e){ userCfg = {}; }
-
         const title = userCfg.botName || '𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 🥂';
 
         const shonux = {
@@ -33,38 +39,42 @@ module.exports = async function(socket, msg, sender, args, prefix, number) {
         };
 
         const text = `
-╭───❏ *BOT STATUS* ❏
-│ ♠️ *𝗕ot Name*: ${title}
-│ ♠️ *𝗢wner*: ${config.OWNER_NAME || '𝚂𝙸𝙻𝙰'}
-│ ♠️ *𝗩ersion*: ${config.BOT_VERSION || '0.0.1'}
-│ ♠️ *𝗣latform*: ${process.env.PLATFORM || 'Heroku'}
-│ ♠️ *𝗨ptime*: ${hours}h ${minutes}m ${seconds}s
-╰───────────────❏
+🌸 *BOT STATUS* 🌸
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+◈🌸 *𝗕ot Name:* ${title}
+◈🌸 *𝗢wner:* ${config.OWNER_NAME || '𝚂𝙸𝙻𝙰'}
+◈🌸 *𝗩ersion:* ${config.BOT_VERSION || '0.0.1'}
+◈🌸 *𝗣latform:* ${process.env.PLATFORM || 'Heroku'}
+◈🌸 *𝗨ptime:* ${hours}h ${minutes}m ${seconds}s
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
 
-➤ 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝛯 𝐂𝐎𝛭𝐌Ҩ𝚴𝐃𝐒
-┏━━━━━━ ❍ ━━━━━━┓
-🛠️ *SY𝑆TE𝛭 CO𝛭MA𝚴DS*
-• 🟢 \`.alive\` — Show bot status
-• 🔌 \`.system\` — Bot System
-• 🧪 \`.ping\` — Check speed
-• 🆔 \`.jid\` — Get your JID
+🌸 *𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝛯 𝐂𝐎𝛭𝐌𝐀𝐍𝐃𝐒* 🌸
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+◈🌸 *.alive* — Show bot status
+◈🌸 *.system* — Bot System
+◈🌸 *.ping* — Check speed
+◈🌸 *.jid* — Get your JID
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
 
-🖼️ *MEDIA TOOLS*
-• 👁‍🗨 \`.vv\` — View once unlock
-• ⭐ \`.getdp\` — Downlode Dp
-• 👀 \`.cinfo\` — Get Channel Info
-• 💾 \`.save / send\` — Status saver
-• 🍭 \`.yts\` — Youtube search
-• 📋 \`.tiktoksearch\` — tiktoksearch
+🌸 *MEDIA TOOLS* 🌸
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+◈🌸 *.vv* — View once unlock
+◈🌸 *.getdp* — Download Dp
+◈🌸 *.cinfo* — Get Channel Info
+◈🌸 *.save / send* — Status saver
+◈🌸 *.yts* — Youtube search
+◈🌸 *.tiktoksearch* — TikTok search
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
 
-📥 *DOWNLOADERS*
-• 🎧 \`.song\` — Download song
-• 📂 \`.csend\` — Channel Song Send
-• 🎥 \`.tiktok\` — TikTok video
-• 📸 \`.facebook\`  — Video Facebook
-• 🎬 \`.video\` — Video
-> © ${config.BOT_FOOTER || '> ♱♱♱♱♱ 𝐏𝐨𝐰𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡 ♱♱♱♱'}
-`.trim();
+🌸 *DOWNLOADERS* 🌸
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+◈🌸 *.song* — Download song
+◈🌸 *.csend* — Channel Song Send
+◈🌸 *.tiktok* — TikTok video
+◈🌸 *.facebook* — Video Facebook
+◈🌸 *.video* — Video
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`.trim();
 
         const buttons = [
             { buttonId: `${prefix}download`, buttonText: { displayText: "📥 ᗪOᗯᑎᒪOᗪ ᗰEᑎᑌ" }, type: 1 },
@@ -81,16 +91,15 @@ module.exports = async function(socket, msg, sender, args, prefix, number) {
             try { imagePayload = require('fs').readFileSync(useLogo); } catch(e){ imagePayload = { url: defaultImg }; }
         }
 
-        await socket.sendMessage(sender, {
+        await sock.sendMessage(sender, {
             image: imagePayload,
             caption: text,
-            footer: "> ♱♱♱♱♱ 𝐏𝐨𝐰𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡 ♱♱♱♱",
             buttons,
             headerType: 4
         }, { quoted: shonux });
 
     } catch (err) {
         console.error('menu command error:', err);
-        try { await socket.sendMessage(sender, { text: '❌ Failed to show menu.' }, { quoted: msg }); } catch(e){}
+        try { await sock.sendMessage(sender, { text: '❌ Failed to show menu.' }, { quoted: m }); } catch(e){}
     }
-};
+});
