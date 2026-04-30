@@ -1,0 +1,82 @@
+const { cmd, footer, loadUserConfig } = require('../sila/silafunctions');
+
+module.exports = cmd({
+    pattern: "facebook",
+    alias: ["fb", "fbdl", "facebok"],
+    react: "📘",
+    desc: "Download Facebook video",
+    category: "downloader",
+    filename: __filename
+}, async (sock, m, sender, args, prefix, number) => {
+    const { igdl } = require('ruhend-scraper');
+    const userConfig = await loadUserConfig(number);
+    const useButton = userConfig.BUTTON === 'true';
+
+    if (!args[0]) return sock.sendMessage(sender, { text: '❗ *Please provide a valid Facebook video link.*\n\n📌 Example: `.fb https://fb.watch/xyz/`' }, { quoted: m });
+
+    await sock.sendMessage(sender, { react: { text: '🕒', key: m.key } });
+
+    let res;
+    try { res = await igdl(args[0]); } catch (error) { return sock.sendMessage(sender, { text: '❌ *Error obtaining data.*' }, { quoted: m }); }
+
+    let result = res.data;
+    if (!result || result.length === 0) return sock.sendMessage(sender, { text: '❌ *No result found.*' }, { quoted: m });
+
+    let hd = result.find(i => i.resolution.includes("720p"));
+    let sd = result.find(i => i.resolution.includes("720p (HD)"));
+    let firstVideo = result[0];
+
+    if (useButton) {
+        await sock.sendMessage(sender, {
+            buttons: [{
+                buttonId: 'action',
+                buttonText: { displayText: '📂 Select Download Quality' },
+                type: 4,
+                nativeFlowInfo: {
+                    name: 'single_select',
+                    paramsJson: JSON.stringify({
+                        title: 'Select FB Video Quality',
+                        sections: [{ title: 'Available Downloads:', rows: [
+                            ...(hd ? [{ title: '🎥 HD (1080p)', description: 'Download in HD quality', id: `${prefix}fb_dl ${hd.url} HD` }] : []),
+                            ...(sd ? [{ title: '📽 SD (720p)', description: 'Download in SD quality', id: `${prefix}fb_dl ${sd.url} SD` }] : [])
+                        ]}]
+                    }),
+                },
+            }],
+            headerType: 1,
+            viewOnce: true,
+            image: { url: firstVideo.thumbnail },
+            caption: `🌸 *FB VIDEO DOWNLOADER* 🌸\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\nChoose your preferred quality:`,
+            contextInfo: require('../sila/silafunctions').getContextInfo(sender)
+        }, { quoted: m });
+    } else {
+        let menu = `🌸 *FB VIDEO DOWNLOADER* 🌸
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+🔢 Reply with the number to download:
+
+${hd ? '1 │ Download FB Video in HD\n' : ''}${sd ? '2 │ Download FB Video in SD\n' : ''}
+
+◈━◈━◈━◈━◈━◈━◈━◈━◈━
+> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`;
+        const menuMsg = await sock.sendMessage(sender, { image: { url: firstVideo.thumbnail }, caption: menu }, { quoted: m });
+
+        sock.ev.on('messages.upsert', async (mUpdate) => {
+            const rMsg = mUpdate.messages[0];
+            if (!rMsg.message?.extendedTextMessage) return;
+            if (rMsg.message.extendedTextMessage.contextInfo?.stanzaId !== menuMsg.key.id) return;
+            const selected = rMsg.message.extendedTextMessage.text.trim();
+
+            if (selected === '1' && hd) {
+                await sock.sendMessage(sender, { react: { text: '⬇️', key: m.key } });
+                await sock.sendMessage(sender, { video: { url: hd.url }, caption: `${footer}`, fileName: 'fb_hd.mp4', mimetype: 'video/mp4' }, { quoted: m });
+                await sock.sendMessage(sender, { react: { text: '✅', key: m.key } });
+            } else if (selected === '2' && sd) {
+                await sock.sendMessage(sender, { react: { text: '⬇️', key: m.key } });
+                await sock.sendMessage(sender, { video: { url: sd.url }, caption: `${footer}`, fileName: 'fb_sd.mp4', mimetype: 'video/mp4' }, { quoted: m });
+                await sock.sendMessage(sender, { react: { text: '✅', key: m.key } });
+            } else {
+                await sock.sendMessage(sender, { text: '❌ Invalid option. Please select 1 or 2.' }, { quoted: m });
+            }
+        });
+    }
+});
