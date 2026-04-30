@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DEW MD - WhatsApp Bot</title>
+<title>𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 - WhatsApp Bot</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
@@ -19,7 +19,7 @@
   margin: 0;
   padding: 0;
   font-family: 'Inter', sans-serif;
-  background: #121212;
+  background: #0a0a0a;
   color: #e0e0e0;
   overflow-x: hidden;
   position: relative; /* Added for pseudo-element positioning */
@@ -33,9 +33,9 @@ body::before {
   width: 100%;
   height: 100%;
   background: 
-    radial-gradient(circle at 50% 50%, rgba(0,255,234,0.1), transparent 40%),
-    radial-gradient(circle at 25% 75%, rgba(0,255,234,0.05), transparent 40%),
-    radial-gradient(circle at 75% 25%, rgba(0,255,234,0.05), transparent 40%);
+    radial-gradient(circle at 50% 50%, rgba(0,100,255,0.15), transparent 40%),
+    radial-gradient(circle at 25% 75%, rgba(0,80,255,0.08), transparent 40%),
+    radial-gradient(circle at 75% 25%, rgba(0,120,255,0.08), transparent 40%);
   animation: rotate 30s linear infinite;
   z-index: -1; /* behind all content */
 }
@@ -62,11 +62,11 @@ body::before {
   .logo {
     font-weight: 900;
     font-size: 1.8rem;
-    color: #00ffea;
+    color: #4488ff;
     letter-spacing: 2px;
     user-select: none;
     text-transform: uppercase;
-    text-shadow: 0 0 8px #00ffea55;
+    text-shadow: 0 0 8px #4488ff55;
   }
   nav a {
     color: #a0a0a0;
@@ -78,7 +78,7 @@ body::before {
   }
   nav a:hover,
   nav a.active {
-    color: #00ffea;
+    color: #4488ff;
   }
   nav a::after {
     content: '';
@@ -86,7 +86,7 @@ body::before {
     left: 0; bottom: -6px;
     width: 0;
     height: 2px;
-    background: #00ffea;
+    background: #4488ff;
     transition: width 0.3s ease;
   }
   nav a:hover::after,
@@ -108,50 +108,50 @@ body::before {
     font-weight: 900;
     margin-bottom: 1rem;
     letter-spacing: 3px;
-    text-shadow: 0 0 10px #00ffea88;
+    text-shadow: 0 0 10px #4488ff88;
   }
   .hero p {
     font-weight: 500;
     font-size: 1.25rem;
     margin-bottom: 3rem;
-    color: #9e9e9e;
+    color: #8899bb;
   }
   .owner-info {
     margin-bottom: 2rem;
     font-size: 1.1rem;
-    color: #00ffea;
+    color: #4488ff;
     font-weight: 600;
     letter-spacing: 1px;
   }
   .owner-info a {
-    color: #00ffea;
+    color: #4488ff;
     text-decoration: none;
     transition: text-shadow 0.3s ease;
   }
   .owner-info a:hover {
-    text-shadow: 0 0 10px #00ffea;
+    text-shadow: 0 0 10px #4488ff;
   }
   .btn {
     padding: 1rem 2.5rem;
     margin: 0 0.75rem;
-    border: 2px solid #00ffea;
+    border: 2px solid #4488ff;
     background: transparent;
-    color: #00ffea;
+    color: #4488ff;
     font-weight: 700;
     font-size: 1.1rem;
     border-radius: 35px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 0 10px #00ffea55;
+    box-shadow: 0 0 10px #4488ff55;
     user-select: none;
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
   }
   .btn:hover {
-    background: #00ffea;
-    color: #121212;
-    box-shadow: 0 0 30px #00ffea;
+    background: #4488ff;
+    color: #0a0a0a;
+    box-shadow: 0 0 30px #4488ff;
   }
   .btn svg {
     stroke-width: 2;
@@ -173,22 +173,22 @@ body::before {
     user-select: none;
   }
   .feature-card {
-    background: #1c1c1c;
+    background: #141428;
     padding: 2rem;
     border-radius: 20px;
-    box-shadow: 0 0 15px #00ffea22;
+    box-shadow: 0 0 15px #0066ff22;
     text-align: center;
     cursor: default;
     transition: transform 0.4s ease, box-shadow 0.4s ease;
   }
   .feature-card:hover {
     transform: translateY(-12px) scale(1.03);
-    box-shadow: 0 0 40px #00ffeaaa;
+    box-shadow: 0 0 40px #4488ffaa;
   }
   .feature-icon i {
     font-size: 2rem;
-    color: #00ffea;
-    text-shadow: 0 0 15px #00ffea55;
+    color: #4488ff;
+    text-shadow: 0 0 15px #4488ff55;
     transition: transform 0.3s ease;
   }
   .feature-card:hover .feature-icon i {
@@ -201,7 +201,7 @@ body::before {
   }
   .feature-desc {
     font-weight: 500;
-    color: #a0a0a0;
+    color: #8899bb;
   }
 
   /* Footer */
@@ -209,13 +209,13 @@ body::before {
     text-align: center;
     padding: 2rem 1rem;
     font-weight: 500;
-    color: #555;
+    color: #556677;
     user-select: none;
     letter-spacing: 1.1px;
-    border-top: 1px solid #222;
+    border-top: 1px solid #1a1a3a;
   }
   footer .owner {
-    color: #00ffea;
+    color: #4488ff;
     font-weight: 700;
   }
 
@@ -241,7 +241,7 @@ body::before {
     font-size: 2rem;
     font-weight: 900;
     margin-bottom: 2rem;
-    color: #00ffea;
+    color: #4488ff;
   }
 
   /* Team Section */
@@ -262,14 +262,14 @@ body::before {
     text-align: center;
     max-width: 200px;
     transition: transform 0.4s ease, box-shadow 0.4s ease;
-    background: #1c1c1c;
+    background: #141428;
     padding: 1.5rem;
     border-radius: 20px;
-    box-shadow: 0 0 15px #00ffea22;
+    box-shadow: 0 0 15px #0066ff22;
   }
   .team-member:hover {
     transform: translateY(-12px) scale(1.03);
-    box-shadow: 0 0 40px #00ffeaaa;
+    box-shadow: 0 0 40px #4488ffaa;
   }
   .team-img {
     width: 150px;
@@ -281,17 +281,17 @@ body::before {
   .member-name {
     font-weight: 800;
     font-size: 1.25rem;
-    color: #00ffea;
+    color: #4488ff;
   }
   .member-role {
     font-weight: 500;
     font-size: 1rem;
-    color: #9e9e9e;
+    color: #8899bb;
     margin-bottom: 1rem;
   }
   .member-social a {
     margin: 0 0.5rem;
-    color: #00ffea;
+    color: #4488ff;
     font-size: 1.4rem;
     transition: color 0.3s, transform 0.3s;
   }
@@ -305,7 +305,7 @@ body::before {
   background: none;
   border: none;
   font-size: 1.8rem;
-  color: #00ffea;
+  color: #4488ff;
   cursor: pointer;
 }
 @media (max-width: 768px) {
@@ -340,7 +340,7 @@ body::before {
     width: 100%;
     flex-direction: column;
     gap: 1rem;
-    background: #1c1c1c;
+    background: #141428;
     padding: 1rem 0;
     text-align: center;
     z-index: 10;
@@ -359,7 +359,7 @@ body::before {
 <body>
 
 <header class="container">
-  <div class="logo">DEW MD™</div>
+  <div class="logo">𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸™</div>
   <button class="menu-btn" aria-label="Open Menu" onclick="toggleMenu()">
     <i class="fas fa-bars"></i>
   </button>
@@ -372,7 +372,7 @@ body::before {
 
 
 <section id="hero" class="hero container" role="banner">
-  <h1>DEW MD MINI BOT</h1>
+  <h1>𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 BOT</h1>
   <p>Automate WhatsApp Effortlessly - Connect multiple devices, generate pair codes, and automate with ease.</p>
 <div style="text-align:center;">
   <button onclick="window.location.href='/pair'" class="btn" aria-label="Generate Pair Code">
@@ -389,7 +389,7 @@ body::before {
 </div>
 <br>
   <!-- Bot Count Display -->
-  <div id="bot-count" style="text-align:center; font-size:1.2rem; color:#00ffea; font-weight:700; margin-top:1rem;">
+  <div id="bot-count" style="text-align:center; font-size:1.2rem; color:#4488ff; font-weight:700; margin-top:1rem;">
     Fetching active bots...
   </div>
 </section>
@@ -434,45 +434,27 @@ body::before {
 
     <!-- Team Member 1 -->
     <article class="team-member">
-      <img src="https://dewcoders.pages.dev/assets/hansa-dewmina.jpeg" alt="Member 1" class="team-img">
-      <h3 class="member-name">Hansa Dewmina</h3>
-      <p class="member-role">Owner | Fronted Devoloper</p>
+      <img src="https://i.ibb.co/7tR0mcqL/file-000000004fa0720c93949d4309122992.png" alt="Member 1" class="team-img">
+      <h3 class="member-name">𝚂𝙸𝙻𝙰 𝚃𝚎𝚌𝚑</h3>
+      <p class="member-role">Owner | Developer</p>
       <div class="member-social">
-        <a href="https://www.youtube.com/@DJ_Dewmina" target="_blank" aria-label="Youtube">
+        <a href="https://www.youtube.com/" target="_blank" aria-label="Youtube">
           <i class="fab fa-youtube"></i>
         </a>
-        <a href="https://www.linkedin.com/in/hansadewmina/" target="_blank" aria-label="LinkedIn">
+        <a href="https://www.linkedin.com/" target="_blank" aria-label="LinkedIn">
           <i class="fab fa-linkedin-in"></i>
         </a>
-        <a href="https://github.com/hansa-dewmina" target="_blank" aria-label="GitHub">
+        <a href="https://github.com/Sila-Md" target="_blank" aria-label="GitHub">
           <i class="fab fa-github"></i>
         </a>
-        <a href="https://web.facebook.com/profile.php?id=61579840751079" target="_blank" aria-label="facebook">
+        <a href="https://web.facebook.com/" target="_blank" aria-label="facebook">
           <i class="fab fa-facebook"></i>
         </a>
-        <a href="https://www.instagram.com/hansadewminalk/" target="_blank" aria-label="instagram">
+        <a href="https://www.instagram.com/" target="_blank" aria-label="instagram">
           <i class="fab fa-instagram"></i>
         </a>
-        <a href="https://whatsapp.com/channel/0029Vb2bFCq0LKZGEl4xEe2G" target="_blank" aria-label="Whatsapp">
+        <a href="https://whatsapp.com/channel/0029VbBG4gfISTkCpKxyMH02" target="_blank" aria-label="Whatsapp">
           <i class="fab fa-whatsapp"></i>
-        </a>
-      </div>
-    </article>
-
-    <!-- Team Member 2 -->
-    <article class="team-member">
-      <img src="https://i.ibb.co/HTHQXhdC/Whats-App-Image-2025-09-28-at-22-03-17-640fbd3e.jpg" alt="Member 2" class="team-img">
-      <h3 class="member-name">Vidhusha Lakshan</h3>
-      <p class="member-role">Member | Developer</p>
-      <div class="member-social">
-        <a href="https://twitter.com/" target="_blank" aria-label="Twitter">
-          <i class="fab fa-twitter"></i>
-        </a>
-        <a href="https://linkedin.com/" target="_blank" aria-label="LinkedIn">
-          <i class="fab fa-linkedin-in"></i>
-        </a>
-        <a href="https://github.com/vidhu" target="_blank" aria-label="GitHub">
-          <i class="fab fa-github"></i>
         </a>
       </div>
     </article>
@@ -481,7 +463,7 @@ body::before {
 </section>
 
 <footer>
-  &copy; 2025 — DEVELOPED BY <br><span class="owner">Dew-Coders Team</span>
+  &copy; 2026 — DEVELOPED BY <br><span class="owner">𝚂𝙸𝙻𝙰 𝚃𝚎𝚌𝚑</span>
 </footer>
 
 <script type='text/javascript' src='//pl27742234.revenuecpmgate.com/9a/a8/70/9aa870abb1839c2e1f7a208a2ee14623.js'></script>
