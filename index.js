@@ -30,7 +30,7 @@ app.get('/login', (req, res) => {
 
 // Multiple users
 const ADMINS = [
-  { username: 'hansadewmina', password: 'hansa2008122@' },
+  { username: 'silatech', password: '22' },
 ];
 
 app.post('/api/login', (req, res) => {
