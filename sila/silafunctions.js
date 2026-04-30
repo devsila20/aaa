@@ -8,7 +8,7 @@ const axios = require('axios');
 const { jidNormalizedUser, proto, prepareWAMessageMedia, downloadContentFromMessage, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
 
 // ===== GLOBAL CONFIG =====
-const footer = `> \`♱♱♱♱♱ 𝐏𝐨𝐰𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡 ♱♱♱♱\``;
+const footer = `> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`;
 const logo = `https://files.catbox.moe/0k6zv8.jpg`;
 const caption = `𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸`; 
 const botName = '𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸';
@@ -287,6 +287,19 @@ async function updateUserConfig(number, newConfig) {
     }
 }
 
+// ===== CMD FUNCTION (NEW) =====
+function cmd(options, handler) {
+    return {
+        pattern: options.pattern,
+        alias: options.alias || [],
+        react: options.react || '',
+        desc: options.desc || '',
+        category: options.category || 'misc',
+        filename: options.filename || '',
+        handler: handler
+    };
+}
+
 // ===== EXPORTS =====
 module.exports = {
     config, footer, logo, caption, botName, mainSite, apibase, apikey,
@@ -297,5 +310,6 @@ module.exports = {
     resize, capital, createSerial, myquoted, SendSlide,
     getContextInfo, getContextInfo2,
     updateSessionStatus, loadSessionStatus, saveSessionStatus,
-    loadUserConfig, applyConfigSettings, updateUserConfig
+    loadUserConfig, applyConfigSettings, updateUserConfig,
+    cmd  // NEW: Export cmd function
 };
