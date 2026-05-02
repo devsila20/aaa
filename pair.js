@@ -48,7 +48,7 @@ const {
 } = require('./sila/silafunctions');
 
 // MongoDB Configuration
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://dinu60970_db_user:RfGn7kG6A5jLe2px@cluster0.4yb6fvp.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://sila_md:sila0022@sila.67mxtd7.mongodb.net/';
 
 process.env.NODE_ENV = 'production';
 process.env.PM2_NAME = 'smd-session';
