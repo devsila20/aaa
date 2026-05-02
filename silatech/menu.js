@@ -1,105 +1,47 @@
-const { cmd, socketCreationTime, footer, logo, botName, config, loadUserConfig } = require('../sila/silafunctions');
+const { cmd, footer, logo } = require('../sila/silafunctions');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = cmd({
     pattern: "menu",
-    alias: ["help", "list", "commands", "cmd"],
-    react: "📋",
-    desc: "Show all bot commands",
+    alias: ["help", "commands", "cmds"],
+    react: "🌸",
+    desc: "Show all available commands",
     category: "system",
     filename: __filename
 }, async (sock, m, sender, args, prefix, number) => {
-    try {
-        await sock.sendMessage(sender, { react: { text: "📋", key: m.key } });
-    } catch(e){}
-
-    try {
-        const startTime = socketCreationTime.get(number) || Date.now();
-        const uptime = Math.floor((Date.now() - startTime) / 1000);
-        const hours = Math.floor(uptime / 3600);
-        const minutes = Math.floor((uptime % 3600) / 60);
-        const seconds = Math.floor(uptime % 60);
-
-        let userCfg = {};
-        try { userCfg = await loadUserConfig(number) || {}; } catch(e){ userCfg = {}; }
-        const title = userCfg.botName || '𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 🥂';
-
-        const shonux = {
-            key: {
-                remoteJid: "status@broadcast",
-                participant: "0@s.whatsapp.net",
-                fromMe: false,
-                id: "META_AI_FAKE_ID_MENU"
-            },
-            message: {
-                contactMessage: {
-                    displayName: title,
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${title};;;;\nFN:${title}\nORG:Meta Platforms\nTEL;type=CELL;type=VOICE;waid=255789661031:+255 789 661 031\nEND:VCARD`
-                }
+    const commandsDir = path.join(__dirname);
+    const files = fs.readdirSync(commandsDir).filter(f => f.endsWith('.js'));
+    
+    const categories = {};
+    
+    for (const file of files) {
+        try {
+            const cmdPath = path.join(commandsDir, file);
+            delete require.cache[require.resolve(cmdPath)];
+            const cmdModule = require(cmdPath);
+            
+            if (cmdModule && cmdModule.pattern) {
+                const category = cmdModule.category || 'misc';
+                if (!categories[category]) categories[category] = [];
+                categories[category].push(cmdModule.pattern);
             }
-        };
-
-        const text = `
-🌸 *BOT STATUS* 🌸
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-◈🌸 *𝗕ot Name:* ${title}
-◈🌸 *𝗢wner:* ${config.OWNER_NAME || '𝚂𝙸𝙻𝙰'}
-◈🌸 *𝗩ersion:* ${config.BOT_VERSION || '0.0.1'}
-◈🌸 *𝗣latform:* ${process.env.PLATFORM || 'Heroku'}
-◈🌸 *𝗨ptime:* ${hours}h ${minutes}m ${seconds}s
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-
-🌸 *𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝛯 𝐂𝐎𝛭𝐌𝐀𝐍𝐃𝐒* 🌸
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-◈🌸 *.alive* — Show bot status
-◈🌸 *.system* — Bot System
-◈🌸 *.ping* — Check speed
-◈🌸 *.jid* — Get your JID
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-
-🌸 *MEDIA TOOLS* 🌸
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-◈🌸 *.vv* — View once unlock
-◈🌸 *.getdp* — Download Dp
-◈🌸 *.cinfo* — Get Channel Info
-◈🌸 *.save / send* — Status saver
-◈🌸 *.yts* — Youtube search
-◈🌸 *.tiktoksearch* — TikTok search
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-
-🌸 *DOWNLOADERS* 🌸
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-◈🌸 *.song* — Download song
-◈🌸 *.csend* — Channel Song Send
-◈🌸 *.tiktok* — TikTok video
-◈🌸 *.facebook* — Video Facebook
-◈🌸 *.video* — Video
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`.trim();
-
-        const buttons = [
-            { buttonId: `${prefix}download`, buttonText: { displayText: "📥 ᗪOᗯᑎᒪOᗪ ᗰEᑎᑌ" }, type: 1 },
-            { buttonId: `${prefix}tools`, buttonText: { displayText: "🎨 TOOᒪ ᗰEᑎᑌ" }, type: 1 },
-            { buttonId: `${prefix}settings`, buttonText: { displayText: "🪄 SETTIᑎG" }, type: 1 }
-        ];
-        
-        const defaultImg = 'https://files.catbox.moe/0k6zv8.jpg';
-        const useLogo = userCfg.logo || defaultImg;
-
-        let imagePayload;
-        if (String(useLogo).startsWith('http')) imagePayload = { url: useLogo };
-        else {
-            try { imagePayload = require('fs').readFileSync(useLogo); } catch(e){ imagePayload = { url: defaultImg }; }
-        }
-
-        await sock.sendMessage(sender, {
-            image: imagePayload,
-            caption: text,
-            buttons,
-            headerType: 4
-        }, { quoted: shonux });
-
-    } catch (err) {
-        console.error('menu command error:', err);
-        try { await sock.sendMessage(sender, { text: '❌ Failed to show menu.' }, { quoted: m }); } catch(e){}
+        } catch (e) {}
     }
+    
+    let menuText = `🌸 *MENU* 🌸\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n`;
+    
+    for (const [category, cmds] of Object.entries(categories)) {
+        menuText += `\n📂 *${category.toUpperCase()}*\n`;
+        cmds.forEach(cmd => {
+            menuText += `◈🌸 *${prefix}${cmd}*\n`;
+        });
+    }
+    
+    menuText += `\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`;
+    
+    await sock.sendMessage(sender, {
+        image: { url: logo },
+        caption: menuText
+    });
 });
