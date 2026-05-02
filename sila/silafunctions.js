@@ -9,7 +9,7 @@ const { jidNormalizedUser, proto, prepareWAMessageMedia, downloadContentFromMess
 
 // ===== GLOBAL CONFIG =====
 const footer = `> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`;
-const logo = `https://i.ibb.co/gMVMsZ18/image.png`;
+const logo = `https://i.ibb.co/YBNqypVR/IMG-20260430-WA0068.jpg`;
 const caption = `𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸`; 
 const botName = '𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸';
 const mainSite = 'https://aaa-6f4l.onrender.com/';
