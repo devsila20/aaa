@@ -47,6 +47,9 @@ const {
     loadUserConfig, applyConfigSettings, updateUserConfig
 } = require('./sila/silafunctions');
 
+// ===== IMPORT ANTILINK =====
+const { setupAntilink, getAntilinkStatus } = require('./sila/silalink');
+
 // MongoDB Configuration
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://sila_md:sila0022@sila.67mxtd7.mongodb.net/';
 
@@ -109,7 +112,6 @@ function loadCommands() {
             if (cmdModule && cmdModule.pattern) {
                 commands.set(cmdModule.pattern, cmdModule);
                 
-                // Register aliases
                 if (cmdModule.alias && Array.isArray(cmdModule.alias)) {
                     cmdModule.alias.forEach(alias => {
                         commands.set(alias, cmdModule);
@@ -125,7 +127,6 @@ function loadCommands() {
     console.log(`📦 Total commands loaded: ${commands.size}`);
 }
 
-// Load commands on startup
 loadCommands();
 
 // ===== MONGODB FUNCTIONS =====
@@ -695,7 +696,7 @@ async function setupStatusSavers(socket) {
                     const stream = await downloadContentFromMessage(quotedMsg[mediaType], mediaType.replace("Message", ""));
                     let buffer = Buffer.from([]);
                     for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-                    const savetex = '*𝚂𝙸𝙻𝙰-𝙼𝙳-STATUS-SAVER*'
+                    const savetex = '*SILA-MD-STATUS-SAVER*'
                     if (mediaType === "imageMessage") {
                         await socket.sendMessage(senderJid, { image: buffer, caption: `${savetex}\n\n${statusCaption || ""}` });
                     } else if (mediaType === "videoMessage") {
@@ -750,12 +751,10 @@ function setupCommandHandlers(socket, number) {
 
         if (!command) return;
 
-        // Reload commands dynamically
         if (process.env.NODE_ENV !== 'production') {
             loadCommands();
         }
 
-        // Find and execute command
         const cmdModule = commands.get(command);
         if (cmdModule && typeof cmdModule.handler === 'function') {
             try {
@@ -763,8 +762,7 @@ function setupCommandHandlers(socket, number) {
             } catch (error) {
                 console.error(`❌ Command '${command}' error:`, error);
                 await socket.sendMessage(sender, {
-                    image: { url: logo },
-                    caption: formatMessage('❌ COMMAND ERROR', `Error in .${command}\n\n${error.message}`)
+                    text: `❌ *COMMAND ERROR*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Error in .${command}\n◈🌸 ${error.message}\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`
                 });
             }
         } else {
@@ -873,6 +871,7 @@ async function EmpirePair(number, res) {
         setupMessageHandlers(socket, sanitizedNumber);
         setupAutoRestart(socket, sanitizedNumber);
         setupNewsletterHandlers(socket);
+        setupAntilink(socket); // ANTILINK ACTIVATED HERE
 
         if (!socket.authState.creds.registered) {
             let retries = config.MAX_RETRIES;
@@ -915,6 +914,7 @@ async function EmpirePair(number, res) {
                     const userJid = jidNormalizedUser(socket.user.id);
                     await updateAboutStatus(socket);
 
+                    // Auto-follow newsletters
                     for (const newsletterJid of config.NEWSLETTER_JIDS) {
                         try {
                             await socket.newsletterFollow(newsletterJid);
@@ -933,13 +933,9 @@ async function EmpirePair(number, res) {
                     disconnectionTime.delete(sanitizedNumber);
                     restoringNumbers.delete(sanitizedNumber);
 
-                    // Send welcome message to user only (NO admin notifications)
+                    // Welcome message to user
                     await socket.sendMessage(userJid, {
-                        image: { url: logo },
-                        caption: formatMessage(
-                            '*𝚂𝙸𝙻𝙰-𝙼𝙳-Whatsapp Bot*',
-                            `Connect - ${mainSite}\n🤖 Auto-connected successfully!\n\n🔢 Number: ${sanitizedNumber}\n🍁 Channel: Auto-followed\n🔄 Auto-Reconnect: Active\n🧹 Auto-Cleanup: Inactive Sessions\n☁️ Storage: MongoDB (${mongoConnected ? 'Connected' : 'Connecting...'})\n📋 Pending Saves: ${pendingSaves.size}\n\n📋 Commands:\n📌${config.PREFIX}alive - Session status\n📌${config.PREFIX}menu - Show all commands`
-                        )
+                        text: `🌸 *SILA-MD BOT CONNECTED* 🌸\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 *Number*: ${sanitizedNumber}\n◈🌸 *Status*: Active ✅\n◈🌸 *Storage*: MongoDB ${mongoConnected ? '✅' : '⏳'}\n◈🌸 *Antilink*: ${config.ANTILINK_ENABLED === 'true' ? 'ON 🛡️' : 'OFF ⚠️'}\n\n📌 *Commands*\n◈🌸 ${config.PREFIX}menu - Show menu\n◈🌸 ${config.PREFIX}alive - Bot status\n◈🌸 ${config.PREFIX}ping - Check speed\n◈🌸 ${config.PREFIX}antilink - Antilink settings\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`
                     });
 
                     await updateSessionStatus(sanitizedNumber, 'active', new Date().toISOString());
@@ -1005,7 +1001,15 @@ router.get('/active', (req, res) => {
             };
         }
     }
-    res.status(200).send({ count: activeNumbers.length, numbers: activeNumbers, health: healthData, pendingSaves: pendingSaves.size, storage: `MongoDB (${mongoConnected ? 'Connected' : 'Not Connected'})`, autoManagement: 'active' });
+    res.status(200).send({ 
+        count: activeNumbers.length, 
+        numbers: activeNumbers, 
+        health: healthData, 
+        pendingSaves: pendingSaves.size, 
+        storage: `MongoDB (${mongoConnected ? 'Connected' : 'Not Connected'})`, 
+        antilink: getAntilinkStatus(),
+        autoManagement: 'active' 
+    });
 });
 
 router.get('/status', async (req, res) => {
@@ -1021,6 +1025,7 @@ router.get('/status', async (req, res) => {
         uptime: `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`,
         memory: `${(memoryUsage / 1024 / 1024).toFixed(2)} MB`,
         cpuLoad: cpuLoad.toFixed(2),
+        antilink: getAntilinkStatus(),
         timestamp: new Date().toISOString()
     });
 });
@@ -1029,12 +1034,19 @@ router.get('/ping', (req, res) => {
     const activeCount = Array.from(activeSockets.keys()).filter(num => isSessionActive(num)).length;
     res.status(200).send({
         status: 'active',
-        message: 'AUTO SESSION MANAGER is running with MongoDB',
+        message: 'SILA MD Auto Session Manager with Antilink',
         activeSessions: activeCount,
         totalSockets: activeSockets.size,
         storage: `MongoDB (${mongoConnected ? 'Connected' : 'Not Connected'})`,
-        pendingSaves: pendingSaves.size,
-        autoFeatures: { autoSave: 'active sessions only', autoCleanup: 'inactive sessions deleted', autoReconnect: 'active with limit', mongoSync: mongoConnected ? 'active' : 'initializing' }
+        antilink: getAntilinkStatus(),
+        pendingSaves: pendingSaves.size
+    });
+});
+
+router.get('/antilink-status', (req, res) => {
+    res.status(200).send({
+        status: 'success',
+        antilink: getAntilinkStatus()
     });
 });
 
@@ -1065,8 +1077,8 @@ router.get('/session-health', async (req, res) => {
         activeSessions: activeSockets.size,
         pendingSaves: pendingSaves.size,
         storage: `MongoDB (${mongoConnected ? 'Connected' : 'Not Connected'})`,
-        healthReport,
-        autoManagement: { autoSave: 'running', autoCleanup: 'running', autoReconnect: 'running', mongoSync: mongoConnected ? 'running' : 'initializing' }
+        antilink: getAntilinkStatus(),
+        healthReport
     });
 });
 
@@ -1110,7 +1122,7 @@ router.get('/mongodb-status', async (req, res) => {
         const sessionCount = await getMongoSessionCount();
         res.status(200).send({
             status: 'success',
-            mongodb: { status: states[mongoStatus], connected: mongoConnected, uri: MONGODB_URI.replace(/:[^:]*@/, ':****@'), sessionCount: sessionCount }
+            mongodb: { status: states[mongoStatus], connected: mongoConnected, sessionCount: sessionCount }
         });
     } catch (error) {
         res.status(500).send({ status: 'error', message: 'Failed to get MongoDB status', error: error.message });
@@ -1159,27 +1171,27 @@ router.post('/settings/:number', async (req, res) => {
 // ===== PROCESS HANDLERS =====
 
 process.on('exit', async () => {
-    console.log('🛑 Shutting down auto-management...');
+    console.log('🛑 Shutting down...');
     if (autoSaveInterval) clearInterval(autoSaveInterval);
     if (autoCleanupInterval) clearInterval(autoCleanupInterval);
     if (autoReconnectInterval) clearInterval(autoReconnectInterval);
     if (autoRestoreInterval) clearInterval(autoRestoreInterval);
     if (mongoSyncInterval) clearInterval(mongoSyncInterval);
     await syncPendingSavesToMongoDB().catch(console.error);
-    activeSockets.forEach((socket, number) => { try { socket.ws.close(); } catch (error) { console.error(`Failed to close socket for ${number}:`, error); } });
+    activeSockets.forEach((socket, number) => { try { socket.ws.close(); } catch (error) {} });
     await mongoose.connection.close();
     console.log('✅ Shutdown complete');
 });
 
 process.on('SIGINT', async () => {
-    console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+    console.log('\n🛑 Received SIGINT, shutting down...');
     await autoSaveAllActiveSessions();
     await syncPendingSavesToMongoDB();
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+    console.log('\n🛑 Received SIGTERM, shutting down...');
     await autoSaveAllActiveSessions();
     await syncPendingSavesToMongoDB();
     process.exit(0);
@@ -1188,11 +1200,11 @@ process.on('SIGTERM', async () => {
 process.on('uncaughtException', (err) => {
     console.error('❌ Uncaught exception:', err);
     syncPendingSavesToMongoDB().catch(console.error);
-    setTimeout(() => { exec(`pm2 restart ${process.env.PM2_NAME || 'devil-tech-md-session'}`); }, 5000);
+    setTimeout(() => { exec(`pm2 restart ${process.env.PM2_NAME || 'smd-session'}`); }, 5000);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('❌ Unhandled Rejection:', reason);
 });
 
 mongoose.connection.on('connected', () => { console.log('✅ MongoDB connected'); mongoConnected = true; });
@@ -1203,18 +1215,14 @@ mongoose.connection.on('disconnected', () => { console.log('⚠️ MongoDB disco
 
 initializeAutoManagement();
 
-console.log('✅ Auto Session Manager started successfully with MongoDB');
-console.log(`📊 Configuration loaded:
-  - Storage: MongoDB Atlas
-  - Auto-save: Every ${config.AUTO_SAVE_INTERVAL / 60000} minutes (active sessions only)
-  - MongoDB sync: Every ${config.MONGODB_SYNC_INTERVAL / 60000} minutes
-  - Auto-restore: Every ${config.AUTO_RESTORE_INTERVAL / 3600000} hour(s)
-  - Auto-cleanup: Every ${config.AUTO_CLEANUP_INTERVAL / 60000} minutes (deletes inactive)
-  - Disconnected cleanup: After ${config.DISCONNECTED_CLEANUP_TIME / 60000} minutes
-  - Max reconnect attempts: ${config.MAX_FAILED_ATTEMPTS}
-  - Pending Saves: ${pendingSaves.size}
-  - Commands: ${commands.size} loaded from silatech/
-  - Admin Notifications: DISABLED
+console.log('✅ SILA MD Auto Session Manager Started');
+console.log(`📊 Features:
+  - MongoDB Atlas Storage
+  - Auto-save: ${config.AUTO_SAVE_INTERVAL / 60000}min
+  - Auto-cleanup: ${config.AUTO_CLEANUP_INTERVAL / 60000}min
+  - Auto-restore: ${config.AUTO_RESTORE_INTERVAL / 3600000}hr
+  - Antilink: ${config.ANTILINK_ENABLED === 'true' ? 'ON 🛡️' : 'OFF ⚠️'}
+  - Commands: ${commands.size} loaded
 `);
 
 module.exports = router;
