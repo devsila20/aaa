@@ -1,5 +1,5 @@
 // ===== ANTILINK MODULE =====
-const { config, isOwner } = require('./silafunctions');
+const { config, isOwner, getContextInfo } = require('./silafunctions');
 
 // Store warnings per group/user
 const warnStore = new Map();
@@ -7,12 +7,12 @@ const warnStore = new Map();
 // URL Detection Patterns
 const URL_PATTERNS = [
     /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)/gi,
-    /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.(com|net|org|io|xyz|me|co|uk|tk|ml|ga|cf|gq|info|online|site|tech|store|blog|app|dev|cloud|live|pro|digital|world|life|today|run|click|link|pw|top|bid|trade|date|download|review|racing|accountant|science|party|webcam|cricket|faith|review|win|men|stream|loan|country|bid|trade|webcam|party|science|review|date|download|accountant|racing|faith|cricket|win|men|stream|loan)\b/gi,
+    /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.(com|net|org|io|xyz|me|co|uk|tk|ml|ga|cf|gq|info|online|site|tech|store|blog|app|dev|cloud|live|pro|digital|world|life|today|run|click|link|pw|top|bid|trade|date|download|review|racing|accountant|science|party|webcam|cricket|faith|win|men|stream|loan|country)\b/gi,
     /wa\.me\/[-a-zA-Z0-9@:%._\+~#=]{1,256}/gi,
     /chat\.whatsapp\.com\/[-a-zA-Z0-9@:%._\+~#=]{1,256}/gi,
 ];
 
-// Whitelist domains that are allowed
+// Whitelist domains
 const WHITELIST_DOMAINS = [
     'whatsapp.com',
     'youtube.com',
@@ -23,20 +23,17 @@ const WHITELIST_DOMAINS = [
     'instagram.com',
     'twitter.com',
     'tiktok.com',
-    ...config.ANTILINK_WHITELIST || []
+    ...(config.ANTILINK_WHITELIST || [])
 ];
 
 /**
- * Check if a string contains URLs
- * @param {string} text - Message text to check
- * @returns {object} - { hasUrl: boolean, urls: array, isWhitelisted: boolean }
+ * Detect URLs in text
  */
 function detectUrls(text) {
     if (!text) return { hasUrl: false, urls: [], isWhitelisted: false };
     
     let foundUrls = [];
     
-    // Check all patterns
     for (const pattern of URL_PATTERNS) {
         const matches = text.match(pattern);
         if (matches) {
@@ -48,7 +45,7 @@ function detectUrls(text) {
         return { hasUrl: false, urls: [], isWhitelisted: false };
     }
     
-    // Check if all URLs are from whitelisted domains
+    // Check if all URLs are whitelisted
     const isWhitelisted = foundUrls.every(url => {
         return WHITELIST_DOMAINS.some(domain => 
             url.toLowerCase().includes(domain.toLowerCase())
@@ -63,20 +60,14 @@ function detectUrls(text) {
 }
 
 /**
- * Get warning key for a user in a group
- * @param {string} groupJid 
- * @param {string} userJid 
- * @returns {string}
+ * Get warning key
  */
 function getWarningKey(groupJid, userJid) {
     return `${groupJid}_${userJid}`;
 }
 
 /**
- * Get current warnings for a user in a group
- * @param {string} groupJid 
- * @param {string} userJid 
- * @returns {number}
+ * Get warnings count
  */
 function getWarnings(groupJid, userJid) {
     const key = getWarningKey(groupJid, userJid);
@@ -84,10 +75,7 @@ function getWarnings(groupJid, userJid) {
 }
 
 /**
- * Add warning to a user in a group
- * @param {string} groupJid 
- * @param {string} userJid 
- * @returns {number} - New warning count
+ * Add warning
  */
 function addWarning(groupJid, userJid) {
     const key = getWarningKey(groupJid, userJid);
@@ -95,7 +83,7 @@ function addWarning(groupJid, userJid) {
     const newCount = current + 1;
     warnStore.set(key, newCount);
     
-    // Auto-clear warnings after 1 hour
+    // Auto-clear after 1 hour
     setTimeout(() => {
         if (warnStore.get(key) === newCount) {
             warnStore.delete(key);
@@ -106,9 +94,7 @@ function addWarning(groupJid, userJid) {
 }
 
 /**
- * Clear warnings for a user
- * @param {string} groupJid 
- * @param {string} userJid 
+ * Clear warnings
  */
 function clearWarnings(groupJid, userJid) {
     const key = getWarningKey(groupJid, userJid);
@@ -116,9 +102,7 @@ function clearWarnings(groupJid, userJid) {
 }
 
 /**
- * Get all warnings in a group
- * @param {string} groupJid 
- * @returns {array}
+ * Get group warnings
  */
 function getGroupWarnings(groupJid) {
     const warnings = [];
@@ -132,9 +116,20 @@ function getGroupWarnings(groupJid) {
 }
 
 /**
- * Main antilink handler - called for every message
- * @param {object} socket - WhatsApp socket
- * @param {object} msg - Message object
+ * Check if user is group admin
+ */
+async function isGroupAdmin(socket, groupJid, userJid) {
+    try {
+        const groupMetadata = await socket.groupMetadata(groupJid);
+        const participant = groupMetadata.participants.find(p => p.id === userJid);
+        return participant && (participant.admin === 'admin' || participant.admin === 'superadmin');
+    } catch (err) {
+        return false;
+    }
+}
+
+/**
+ * MAIN ANTILINK HANDLER
  */
 async function handleAntilink(socket, msg) {
     try {
@@ -148,21 +143,23 @@ async function handleAntilink(socket, msg) {
         const userJid = msg.key.participant || msg.key.remoteJid;
         
         // Skip if group is exempted
-        if (config.ANTILINK_ALLOWED_GROUPS && config.ANTILINK_ALLOWED_GROUPS.includes(groupJid)) return;
+        if (config.ANTILINK_ALLOWED_GROUPS?.includes(groupJid)) return;
         
-        // Skip if sender is owner
-        const senderNumber = userJid.replace('@s.whatsapp.net', '');
-        if (isOwner(`${senderNumber}@s.whatsapp.net`)) return;
+        // ===== ADMIN BYPASS =====
+        // Check if sender is bot owner
+        const senderNumber = userJid.replace('@s.whatsapp.net', '').replace(/[^0-9]/g, '');
+        const ownerNumber = config.OWNER_NUMBER.replace(/[^0-9]/g, '');
         
-        // Skip if sender is group admin
-        try {
-            const groupMetadata = await socket.groupMetadata(groupJid);
-            const participant = groupMetadata.participants.find(p => p.id === userJid);
-            if (participant && (participant.admin === 'admin' || participant.admin === 'superadmin')) {
-                return;
-            }
-        } catch (err) {
-            // Can't check admin status, proceed anyway
+        if (senderNumber === ownerNumber) {
+            console.log(`👑 Owner bypass: ${senderNumber}`);
+            return; // Skip owner
+        }
+        
+        // Check if sender is group admin
+        const isAdmin = await isGroupAdmin(socket, groupJid, userJid);
+        if (isAdmin) {
+            console.log(`👮 Admin bypass: ${userJid.split('@')[0]}`);
+            return; // Skip group admins
         }
         
         // Get message text
@@ -177,86 +174,95 @@ async function handleAntilink(socket, msg) {
             messageText = msg.message.videoMessage.caption;
         }
         
+        if (!messageText) return;
+        
         // Detect URLs
         const detection = detectUrls(messageText);
         
+        // Skip if no URLs or whitelisted
         if (!detection.hasUrl || detection.isWhitelisted) return;
         
-        // URL detected! Take action
-        console.log(`🔗 Antilink: Detected URLs from ${userJid} in ${groupJid}:`, detection.urls);
+        console.log(`🔗 Antilink: ${userJid.split('@')[0]} in ${groupJid.split('@')[0]}`);
+        console.log(`🔗 URLs: ${detection.urls.join(', ')}`);
         
-        // Delete the message first
+        // ===== DELETE MESSAGE =====
         try {
             await socket.sendMessage(groupJid, {
                 delete: msg.key
             });
         } catch (err) {
-            console.error('❌ Failed to delete message:', err.message);
+            console.error('❌ Delete failed:', err.message);
         }
         
         const action = config.ANTILINK_ACTION || 'delete';
+        const contextInfo = getContextInfo(userJid);
         
         switch (action) {
             case 'delete':
-                // Just delete and warn
+                // Just delete with warning
                 await socket.sendMessage(groupJid, {
-                    text: `⚠️ *Antilink Warning*\n\n@${userJid.split('@')[0]} link zinaruhusiwa kwenye group hili!\n\n_Message deleted_`,
-                    mentions: [userJid]
+                    text: `⚠️ *ANTILINK WARNING*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 @${userJid.split('@')[0]} links are not allowed in this group!\n◈🌸 Your message has been deleted.\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+                    mentions: [userJid],
+                    contextInfo
                 });
                 break;
                 
             case 'kick':
-                // Kick immediately
+                // Remove user immediately
                 try {
                     await socket.groupParticipantsUpdate(groupJid, [userJid], 'remove');
                     await socket.sendMessage(groupJid, {
-                        text: `🚫 @${userJid.split('@')[0]} ameondolewa kwenye group kwa kutuma link\n\n_Antilink Protection_`,
-                        mentions: [userJid]
+                        text: `🚫 *ANTILINK ACTION*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 @${userJid.split('@')[0]} has been removed for sending links\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+                        mentions: [userJid],
+                        contextInfo
                     });
                 } catch (err) {
                     await socket.sendMessage(groupJid, {
-                        text: `❌ Failed to remove user. Make sure bot is admin.`
+                        text: `❌ *FAILED TO REMOVE*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Unable to remove user. Make sure bot is admin.\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+                        contextInfo
                     });
                 }
                 break;
                 
             case 'warn':
-                // Warning system
+                // Warning system with limit
                 const warningCount = addWarning(groupJid, userJid);
                 const warnLimit = config.ANTILINK_WARN_LIMIT || 3;
                 
                 if (warningCount >= warnLimit) {
-                    // Kick after reaching warn limit
+                    // Remove after reaching limit
                     try {
                         await socket.groupParticipantsUpdate(groupJid, [userJid], 'remove');
                         clearWarnings(groupJid, userJid);
                         await socket.sendMessage(groupJid, {
-                            text: `🚫 *Antilink Action*\n\n@${userJid.split('@')[0]} ameondolewa baada ya warnings ${warningCount}/${warnLimit}\n\n_Antilink Protection_`,
-                            mentions: [userJid]
+                            text: `🚫 *ANTILINK REMOVAL*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 @${userJid.split('@')[0]} has been removed\n◈🌸 Reason: ${warningCount}/${warnLimit} link warnings\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+                            mentions: [userJid],
+                            contextInfo
                         });
                     } catch (err) {
                         await socket.sendMessage(groupJid, {
-                            text: `❌ Failed to remove user. Make sure bot is admin.`
+                            text: `❌ *FAILED TO REMOVE*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Unable to remove user. Make sure bot is admin.\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+                            contextInfo
                         });
                     }
                 } else {
-                    // Send warning message
+                    // Send warning
                     await socket.sendMessage(groupJid, {
-                        text: `⚠️ *Antilink Warning ${warningCount}/${warnLimit}*\n\n@${userJid.split('@')[0]} link haziruhusiwi!\nUkituma tena utaondolewa.\n\n_Messages with links will be deleted_`,
-                        mentions: [userJid]
+                        text: `⚠️ *ANTILINK WARNING ${warningCount}/${warnLimit}*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 @${userJid.split('@')[0]} links are not allowed!\n◈🌸 Warning: ${warningCount} of ${warnLimit}\n◈🌸 You will be removed if you continue.\n◈🌸 Your message has been deleted.\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+                        mentions: [userJid],
+                        contextInfo
                     });
                 }
                 break;
         }
         
     } catch (error) {
-        console.error('❌ Antilink handler error:', error);
+        console.error('❌ Antilink error:', error.message);
     }
 }
 
 /**
- * Setup antilink listener on socket
- * @param {object} socket - WhatsApp socket
+ * Setup antilink on socket
  */
 function setupAntilink(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
@@ -266,21 +272,21 @@ function setupAntilink(socket) {
         await handleAntilink(socket, msg);
     });
     
-    console.log('🛡️ Antilink protection activated');
+    console.log('🛡️ Antilink Active (Admin/Owner Bypass)');
 }
 
 /**
  * Get antilink status
- * @returns {object}
  */
 function getAntilinkStatus() {
     return {
         enabled: config.ANTILINK_ENABLED === 'true',
-        action: config.ANTILINK_ACTION,
-        warnLimit: config.ANTILINK_WARN_LIMIT,
+        action: config.ANTILINK_ACTION || 'delete',
+        warnLimit: config.ANTILINK_WARN_LIMIT || 3,
         whitelistDomains: WHITELIST_DOMAINS,
         exemptedGroups: config.ANTILINK_ALLOWED_GROUPS || [],
-        totalWarnedUsers: warnStore.size
+        totalWarnedUsers: warnStore.size,
+        adminBypass: true
     };
 }
 
