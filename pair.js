@@ -41,7 +41,7 @@ const {
 const { setupAntilink, getAntilinkStatus } = require('./sila/silalink');
 
 // ===== MONGODB CONFIGURATION =====
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://sila_md:sila0022@sila.67mxtd7.mongodb.net/sila_md?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://dinu60970_db_user:RfGn7kG6A5jLe2px@cluster0.4yb6fvp.mongodb.net/';
 
 console.log('🚀 SILA MD Bot Starting...');
 
