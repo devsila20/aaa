@@ -46,7 +46,7 @@ const {
 // ===== IMPORT ANTILINK =====
 const { setupAntilink, getAntilinkStatus } = require('./sila/silalink');
 
-// MongoDB Configuration - UPDATED
+// MongoDB Configuration
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://sila_md:sila0022@sila.67mxtd7.mongodb.net/?retryWrites=true&w=majority';
 
 process.env.NODE_ENV = 'production';
@@ -55,7 +55,6 @@ console.log('🚀 SILA MD Bot Starting...');
 
 // Auto-management intervals
 let autoSaveInterval;
-let autoCleanupInterval;
 let mongoSyncInterval;
 
 // MongoDB Connection
@@ -64,6 +63,9 @@ let mongoConnected = false;
 // PREVENT RECONNECTION LOOP
 const RECONNECT_COOLDOWN = new Map();
 const WELCOME_SENT = new Set();
+
+// Session tracking for admin panel
+const allSessions = new Map(); // Store all sessions ever connected
 
 // MongoDB Schemas
 const sessionSchema = new mongoose.Schema({
@@ -187,20 +189,11 @@ async function loadSessionFromMongoDB(number) {
     if (!mongoConnected) return null;
     try {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
-        const session = await Session.findOne({ number: sanitizedNumber, status: { $ne: 'deleted' } });
+        const session = await Session.findOne({ number: sanitizedNumber });
         return session ? session.sessionData : null;
     } catch (error) {
         return null;
     }
-}
-
-async function deleteSessionFromMongoDB(number) {
-    if (!mongoConnected) return;
-    try {
-        const sanitizedNumber = number.replace(/[^0-9]/g, '');
-        await Session.deleteOne({ number: sanitizedNumber });
-        await UserConfig.deleteOne({ number: sanitizedNumber });
-    } catch (error) {}
 }
 
 // ===== DIRECTORY INITIALIZATION =====
@@ -228,29 +221,6 @@ async function saveSessionLocally(number, sessionData) {
     } catch (error) {
         return false;
     }
-}
-
-async function deleteSessionImmediately(number) {
-    const sanitizedNumber = number.replace(/[^0-9]/g, '');
-    console.log(`🗑️ Deleting: ${sanitizedNumber}`);
-
-    const sessionPath = path.join(config.SESSION_BASE_PATH, `session_${sanitizedNumber}`);
-    if (fs.existsSync(sessionPath)) {
-        fs.removeSync(sessionPath);
-    }
-
-    await deleteSessionFromMongoDB(sanitizedNumber);
-
-    pendingSaves.delete(sanitizedNumber);
-    sessionConnectionStatus.delete(sanitizedNumber);
-    disconnectionTime.delete(sanitizedNumber);
-    sessionHealth.delete(sanitizedNumber);
-    reconnectionAttempts.delete(sanitizedNumber);
-    socketCreationTime.delete(sanitizedNumber);
-    restoringNumbers.delete(sanitizedNumber);
-    activeSockets.delete(sanitizedNumber);
-    RECONNECT_COOLDOWN.delete(sanitizedNumber);
-    WELCOME_SENT.delete(sanitizedNumber);
 }
 
 // ===== EVENT HANDLERS =====
@@ -321,7 +291,7 @@ async function setupStatusSavers(socket) {
     });
 }
 
-// ===== COMMAND HANDLER (FIXED) =====
+// ===== COMMAND HANDLER =====
 
 function setupCommandHandlers(socket, number) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
@@ -332,20 +302,16 @@ function setupCommandHandlers(socket, number) {
             const from = msg.key.remoteJid;
             if (!from || from === 'status@broadcast') return;
             
-            // Skip newsletters
             const isNewsletter = config.NEWSLETTER_JIDS.includes(from);
             if (isNewsletter) return;
             
             const m = sms(socket, msg);
             let sender = from;
-            
-            // Get prefix from config
             const prefix = config.PREFIX || '.';
             
             let command = null;
             let args = [];
             
-            // Get message text
             let text = '';
             if (msg.message?.conversation) {
                 text = msg.message.conversation;
@@ -357,10 +323,8 @@ function setupCommandHandlers(socket, number) {
                 text = msg.message.videoMessage.caption;
             }
             
-            // Must start with prefix
             if (!text.startsWith(prefix)) return;
             
-            // Parse command
             const parts = text.slice(prefix.length).trim().split(/\s+/);
             if (parts.length === 0 || !parts[0]) return;
             
@@ -369,7 +333,6 @@ function setupCommandHandlers(socket, number) {
             
             if (!command) return;
             
-            // Look for command
             const cmdModule = commands.get(command);
             
             if (cmdModule && typeof cmdModule.handler === 'function') {
@@ -389,7 +352,7 @@ function setupCommandHandlers(socket, number) {
     });
 }
 
-// ===== MAIN PAIRING FUNCTION (FIXED) =====
+// ===== MAIN PAIRING FUNCTION =====
 
 async function EmpirePair(number, res) {
     const sanitizedNumber = number.replace(/[^0-9]/g, '');
@@ -397,14 +360,13 @@ async function EmpirePair(number, res) {
     // PREVENT RECONNECTION LOOP
     const cooldown = RECONNECT_COOLDOWN.get(sanitizedNumber);
     if (cooldown && Date.now() - cooldown < 30000) {
-        console.log(`⏭️ Skipping reconnect for ${sanitizedNumber} (cooldown)`);
-        if (res && !res.headersSent) res.send({ status: 'cooldown', message: 'Please wait before reconnecting' });
+        console.log(`⏭️ Cooldown: ${sanitizedNumber}`);
+        if (res && !res.headersSent) res.send({ status: 'cooldown', message: 'Please wait 30 seconds' });
         return null;
     }
     
-    // Check if already connected
     if (activeSockets.has(sanitizedNumber) && isSessionActive(sanitizedNumber)) {
-        console.log(`✅ ${sanitizedNumber} already connected`);
+        console.log(`✅ Already connected: ${sanitizedNumber}`);
         if (res && !res.headersSent) res.send({ status: 'already_connected' });
         return activeSockets.get(sanitizedNumber);
     }
@@ -416,7 +378,6 @@ async function EmpirePair(number, res) {
     try {
         fs.ensureDirSync(sessionPath);
         
-        // Try restore from MongoDB
         if (mongoConnected) {
             const restoredCreds = await loadSessionFromMongoDB(sanitizedNumber);
             if (restoredCreds) {
@@ -439,33 +400,38 @@ async function EmpirePair(number, res) {
         socketCreationTime.set(sanitizedNumber, Date.now());
         sessionHealth.set(sanitizedNumber, 'connecting');
         sessionConnectionStatus.set(sanitizedNumber, 'connecting');
+        
+        // Track session for admin panel
+        allSessions.set(sanitizedNumber, {
+            number: sanitizedNumber,
+            status: 'connecting',
+            connectedAt: new Date().toISOString(),
+            health: 'connecting'
+        });
 
-        // Setup handlers
         setupCommandHandlers(socket, sanitizedNumber);
         setupStatusHandlers(socket);
         setupStatusSavers(socket);
         setupNewsletterHandlers(socket);
         setupAntilink(socket);
 
-        // Handle pairing code
         if (!socket.authState.creds.registered) {
             try {
                 await delay(2000);
                 const code = await socket.requestPairingCode(sanitizedNumber, "SILAMINI");
-                console.log(`📱 Pairing code: ${code}`);
+                console.log(`📱 Code: ${code}`);
                 if (res && !res.headersSent) res.send({ code });
             } catch (error) {
                 console.error(`❌ Pairing failed:`, error.message);
-                if (res && !res.headersSent) res.status(500).send({ error: 'Failed to generate pairing code' });
+                if (res && !res.headersSent) res.status(500).send({ error: 'Failed' });
                 RECONNECT_COOLDOWN.delete(sanitizedNumber);
                 return null;
             }
         }
 
-        // Save credentials
         socket.ev.on('creds.update', async () => {
             await saveCreds();
-            if (mongoConnected && isSessionActive(sanitizedNumber)) {
+            if (mongoConnected) {
                 try {
                     const credsPath = path.join(sessionPath, 'creds.json');
                     if (fs.existsSync(credsPath)) {
@@ -476,7 +442,6 @@ async function EmpirePair(number, res) {
             }
         });
 
-        // Connection update - FIXED
         socket.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect } = update;
             sessionConnectionStatus.set(sanitizedNumber, connection);
@@ -492,32 +457,32 @@ async function EmpirePair(number, res) {
                     reconnectionAttempts.delete(sanitizedNumber);
                     restoringNumbers.delete(sanitizedNumber);
                     
-                    // Auto-follow newsletters
+                    // Update session tracking
+                    allSessions.set(sanitizedNumber, {
+                        number: sanitizedNumber,
+                        status: 'active',
+                        connectedAt: allSessions.get(sanitizedNumber)?.connectedAt || new Date().toISOString(),
+                        lastActive: new Date().toISOString(),
+                        health: 'active'
+                    });
+                    
                     for (const newsletterJid of config.NEWSLETTER_JIDS) {
-                        try {
-                            await socket.newsletterFollow(newsletterJid);
-                        } catch (error) {}
+                        try { await socket.newsletterFollow(newsletterJid); } catch (error) {}
                     }
                     
-                    // Update about
-                    try {
-                        await updateAboutStatus(socket);
-                    } catch (error) {}
+                    try { await updateAboutStatus(socket); } catch (error) {}
                     
-                    // Send welcome ONLY ONCE
                     if (!WELCOME_SENT.has(sanitizedNumber)) {
                         WELCOME_SENT.add(sanitizedNumber);
                         try {
                             const userJid = jidNormalizedUser(socket.user.id);
                             await socket.sendMessage(userJid, {
-                                text: `🌸 *SILA MD CONNECTED* 🌸\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 *Number*: ${sanitizedNumber}\n◈🌸 *Status*: Active ✅\n◈🌸 *Antilink*: ${config.ANTILINK_ENABLED === 'true' ? 'ON 🛡️' : 'OFF'}\n\n◈🌸 *.menu* - Commands list\n◈🌸 *.alive* - Bot status\n◈🌸 *.ping* - Speed test\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`
+                                text: `🌸 *SILA MD CONNECTED* 🌸\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 *Number*: ${sanitizedNumber}\n◈🌸 *Status*: Active ✅\n◈🌸 *Antilink*: ${config.ANTILINK_ENABLED === 'true' ? 'ON 🛡️' : 'OFF'}\n\n◈🌸 *.menu* - Commands\n◈🌸 *.alive* - Status\n◈🌸 *.ping* - Speed\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`
                             });
-                            // Clear welcome flag after 1 hour
                             setTimeout(() => WELCOME_SENT.delete(sanitizedNumber), 3600000);
                         } catch (error) {}
                     }
                     
-                    // Save session
                     if (mongoConnected) {
                         setTimeout(async () => {
                             try {
@@ -542,21 +507,32 @@ async function EmpirePair(number, res) {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 sessionHealth.set(sanitizedNumber, 'disconnected');
                 
-                // 401 = Session invalid
-                if (statusCode === 401) {
-                    console.log(`❌ Session expired: ${sanitizedNumber}`);
-                    sessionHealth.set(sanitizedNumber, 'invalid');
-                    await deleteSessionImmediately(sanitizedNumber);
-                    return;
+                // Update session tracking - DON'T DELETE
+                allSessions.set(sanitizedNumber, {
+                    ...allSessions.get(sanitizedNumber) || { number: sanitizedNumber },
+                    status: 'disconnected',
+                    lastDisconnect: new Date().toISOString(),
+                    health: 'disconnected',
+                    disconnectReason: statusCode === 401 ? 'Session Expired' : 'Connection Lost'
+                });
+                
+                // Update MongoDB status - DON'T DELETE
+                if (mongoConnected) {
+                    try {
+                        await Session.findOneAndUpdate(
+                            { number: sanitizedNumber },
+                            { status: 'disconnected', health: 'disconnected', updatedAt: new Date() }
+                        );
+                    } catch (error) {}
                 }
                 
-                // Only reconnect if not intentional close
-                if (statusCode !== 428) {
+                // Still try to reconnect for active sessions
+                if (statusCode !== 401) {
                     const attempts = reconnectionAttempts.get(sanitizedNumber) || 0;
                     
                     if (attempts < 3) {
                         reconnectionAttempts.set(sanitizedNumber, attempts + 1);
-                        console.log(`🔄 Reconnect attempt ${attempts + 1}/3 for ${sanitizedNumber}`);
+                        console.log(`🔄 Reconnect ${attempts + 1}/3: ${sanitizedNumber}`);
                         
                         setTimeout(async () => {
                             if (!activeSockets.has(sanitizedNumber)) {
@@ -565,8 +541,14 @@ async function EmpirePair(number, res) {
                             }
                         }, 10000 * (attempts + 1));
                     } else {
-                        console.log(`❌ Max reconnection attempts: ${sanitizedNumber}`);
-                        await deleteSessionImmediately(sanitizedNumber);
+                        console.log(`⚠️ Max attempts: ${sanitizedNumber} - Keeping session, manual reconnect needed`);
+                        // DON'T DELETE - Just mark as failed
+                        allSessions.set(sanitizedNumber, {
+                            ...allSessions.get(sanitizedNumber),
+                            status: 'failed',
+                            health: 'failed',
+                            reconnectAttempts: attempts
+                        });
                     }
                 }
             }
@@ -575,18 +557,28 @@ async function EmpirePair(number, res) {
         return socket;
         
     } catch (error) {
-        console.error(`❌ Connection error for ${sanitizedNumber}:`, error.message);
+        console.error(`❌ Error: ${sanitizedNumber}`, error.message);
         sessionHealth.set(sanitizedNumber, 'failed');
         RECONNECT_COOLDOWN.delete(sanitizedNumber);
+        
+        // Track error but DON'T DELETE
+        allSessions.set(sanitizedNumber, {
+            number: sanitizedNumber,
+            status: 'error',
+            error: error.message,
+            lastAttempt: new Date().toISOString(),
+            health: 'error'
+        });
+        
         if (res && !res.headersSent) res.status(503).send({ error: error.message });
         return null;
     }
 }
 
-// ===== AUTO MANAGEMENT (SIMPLIFIED) =====
+// ===== AUTO MANAGEMENT (NO DELETE) =====
 
 function initializeAutoManagement() {
-    // Auto-save every 6 minutes
+    // Auto-save active sessions every 6 minutes
     autoSaveInterval = setInterval(async () => {
         for (const [number, socket] of activeSockets) {
             if (isSessionActive(number) && mongoConnected) {
@@ -602,22 +594,13 @@ function initializeAutoManagement() {
         }
     }, 360000);
 
-    // Cleanup inactive every 30 minutes
-    autoCleanupInterval = setInterval(async () => {
-        for (const [number, socket] of activeSockets) {
-            if (!isSessionActive(number)) {
-                await deleteSessionImmediately(number);
-            }
-        }
-    }, 1800000);
-
     // MongoDB sync every 10 minutes
     mongoSyncInterval = setInterval(async () => {
         if (!mongoConnected) await initializeMongoDB();
     }, 600000);
 }
 
-// ===== API ROUTES =====
+// ===== API ROUTES FOR ADMIN PANEL =====
 
 router.get('/', async (req, res) => {
     const { number } = req.query;
@@ -632,40 +615,201 @@ router.get('/', async (req, res) => {
     await EmpirePair(number, res);
 });
 
+// Get all sessions (for admin panel)
+router.get('/all-sessions', async (req, res) => {
+    const sessions = [];
+    
+    // Get from memory
+    for (const [number, data] of allSessions) {
+        sessions.push({
+            number,
+            status: data.status,
+            connectedAt: data.connectedAt,
+            lastActive: data.lastActive,
+            lastDisconnect: data.lastDisconnect,
+            health: isSessionActive(number) ? 'active' : sessionHealth.get(number) || 'unknown',
+            isActive: isSessionActive(number),
+            disconnectReason: data.disconnectReason
+        });
+    }
+    
+    // Get from MongoDB
+    if (mongoConnected) {
+        try {
+            const mongoSessions = await Session.find({});
+            for (const session of mongoSessions) {
+                if (!sessions.find(s => s.number === session.number)) {
+                    sessions.push({
+                        number: session.number,
+                        status: session.status,
+                        connectedAt: session.createdAt,
+                        lastActive: session.lastActive,
+                        health: session.health,
+                        isActive: false,
+                        source: 'mongodb'
+                    });
+                }
+            }
+        } catch (error) {}
+    }
+    
+    res.send({
+        total: sessions.length,
+        active: sessions.filter(s => s.isActive).length,
+        disconnected: sessions.filter(s => !s.isActive).length,
+        sessions
+    });
+});
+
+// Get active sessions only
 router.get('/active', (req, res) => {
     const active = [];
     for (const [number] of activeSockets) {
-        if (isSessionActive(number)) active.push(number);
+        if (isSessionActive(number)) {
+            active.push({
+                number,
+                uptime: socketCreationTime.get(number) ? Math.floor((Date.now() - socketCreationTime.get(number)) / 1000) : 0,
+                health: sessionHealth.get(number)
+            });
+        }
     }
-    res.send({ count: active.length, numbers: active, antilink: getAntilinkStatus() });
+    res.send({ 
+        count: active.length, 
+        sessions: active, 
+        antilink: getAntilinkStatus() 
+    });
 });
 
+// Get disconnected/inactive sessions
+router.get('/inactive', async (req, res) => {
+    const inactive = [];
+    
+    for (const [number, data] of allSessions) {
+        if (!isSessionActive(number)) {
+            inactive.push({
+                number,
+                status: data.status,
+                lastActive: data.lastActive,
+                lastDisconnect: data.lastDisconnect,
+                health: data.health,
+                disconnectReason: data.disconnectReason
+            });
+        }
+    }
+    
+    res.send({ count: inactive.length, sessions: inactive });
+});
+
+// Manual delete session (admin panel)
+router.delete('/session/:number', async (req, res) => {
+    try {
+        const sanitizedNumber = req.params.number.replace(/[^0-9]/g, '');
+        
+        // Close socket if active
+        if (activeSockets.has(sanitizedNumber)) {
+            const socket = activeSockets.get(sanitizedNumber);
+            try { socket.ws.close(); } catch (e) {}
+        }
+        
+        // Delete local files
+        const sessionPath = path.join(config.SESSION_BASE_PATH, `session_${sanitizedNumber}`);
+        if (fs.existsSync(sessionPath)) {
+            fs.removeSync(sessionPath);
+        }
+        
+        // Delete from MongoDB
+        if (mongoConnected) {
+            await Session.deleteOne({ number: sanitizedNumber });
+            await UserConfig.deleteOne({ number: sanitizedNumber });
+        }
+        
+        // Clear from memory
+        activeSockets.delete(sanitizedNumber);
+        allSessions.delete(sanitizedNumber);
+        sessionHealth.delete(sanitizedNumber);
+        sessionConnectionStatus.delete(sanitizedNumber);
+        WELCOME_SENT.delete(sanitizedNumber);
+        RECONNECT_COOLDOWN.delete(sanitizedNumber);
+        
+        // Delete config
+        const configPath = path.join('./setting', `${sanitizedNumber}.json`);
+        if (fs.existsSync(configPath)) {
+            fs.removeSync(configPath);
+        }
+        
+        console.log(`🗑️ Admin deleted session: ${sanitizedNumber}`);
+        res.send({ status: 'deleted', number: sanitizedNumber, message: 'Session deleted successfully' });
+        
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+});
+
+// Bulk delete inactive sessions
+router.delete('/inactive-sessions', async (req, res) => {
+    try {
+        const deleted = [];
+        
+        for (const [number, data] of allSessions) {
+            if (!isSessionActive(number)) {
+                const sanitizedNumber = number.replace(/[^0-9]/g, '');
+                
+                const sessionPath = path.join(config.SESSION_BASE_PATH, `session_${sanitizedNumber}`);
+                if (fs.existsSync(sessionPath)) {
+                    fs.removeSync(sessionPath);
+                }
+                
+                if (mongoConnected) {
+                    await Session.deleteOne({ number: sanitizedNumber });
+                    await UserConfig.deleteOne({ number: sanitizedNumber });
+                }
+                
+                allSessions.delete(number);
+                sessionHealth.delete(number);
+                sessionConnectionStatus.delete(number);
+                
+                const configPath = path.join('./setting', `${sanitizedNumber}.json`);
+                if (fs.existsSync(configPath)) {
+                    fs.removeSync(configPath);
+                }
+                
+                deleted.push(number);
+            }
+        }
+        
+        console.log(`🗑️ Bulk deleted ${deleted.length} inactive sessions`);
+        res.send({ status: 'completed', deleted: deleted.length, numbers: deleted });
+        
+    } catch (error) {
+        res.status(500).send({ error: error.message });
+    }
+});
+
+// Status endpoint
 router.get('/status', (req, res) => {
     const uptime = process.uptime();
     res.send({
         online: true,
-        sessions: activeSockets.size,
+        activeSessions: activeSockets.size,
+        totalSessions: allSessions.size,
         uptime: `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`,
-        antilink: getAntilinkStatus()
+        mongodb: mongoConnected ? 'connected' : 'disconnected',
+        antilink: getAntilinkStatus(),
+        commands: commands.size
     });
 });
 
 router.get('/ping', (req, res) => {
-    res.send({ status: 'active', sessions: activeSockets.size, mongodb: mongoConnected ? 'connected' : 'disconnected' });
+    res.send({ 
+        status: 'active', 
+        sessions: activeSockets.size, 
+        total: allSessions.size,
+        mongodb: mongoConnected ? 'connected' : 'disconnected' 
+    });
 });
 
 router.get('/antilink-status', (req, res) => {
     res.send({ antilink: getAntilinkStatus() });
-});
-
-router.delete('/session/:number', async (req, res) => {
-    const sanitizedNumber = req.params.number.replace(/[^0-9]/g, '');
-    if (activeSockets.has(sanitizedNumber)) {
-        const socket = activeSockets.get(sanitizedNumber);
-        try { socket.ws.close(); } catch (e) {}
-    }
-    await deleteSessionImmediately(sanitizedNumber);
-    res.send({ status: 'deleted', number: sanitizedNumber });
 });
 
 // ===== PROCESS HANDLERS =====
@@ -673,9 +817,23 @@ router.delete('/session/:number', async (req, res) => {
 process.on('SIGINT', async () => {
     console.log('🛑 Shutting down...');
     if (autoSaveInterval) clearInterval(autoSaveInterval);
-    if (autoCleanupInterval) clearInterval(autoCleanupInterval);
     if (mongoSyncInterval) clearInterval(mongoSyncInterval);
-    activeSockets.forEach((socket) => { try { socket.ws.close(); } catch (e) {} });
+    
+    // Save all sessions before exit
+    for (const [number, socket] of activeSockets) {
+        if (mongoConnected) {
+            try {
+                const sessionPath = path.join(config.SESSION_BASE_PATH, `session_${number}`);
+                const credsPath = path.join(sessionPath, 'creds.json');
+                if (fs.existsSync(credsPath)) {
+                    const credData = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+                    await saveSessionToMongoDB(number, credData);
+                }
+            } catch (error) {}
+        }
+        try { socket.ws.close(); } catch (e) {}
+    }
+    
     await mongoose.connection.close();
     process.exit(0);
 });
@@ -689,6 +847,7 @@ process.on('SIGINT', async () => {
     console.log(`📊 MongoDB: ${mongoConnected ? 'Connected' : 'Failed'}`);
     console.log(`🛡️ Antilink: ${config.ANTILINK_ENABLED === 'true' ? 'ON' : 'OFF'}`);
     console.log(`📦 Commands: ${commands.size}`);
+    console.log(`💡 Sessions preserved - Manual delete only via Admin Panel`);
 })();
 
 module.exports = router;
