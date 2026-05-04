@@ -10,6 +10,8 @@
     "@octokit/rest": "^20.0.2",
     "@whiskeysockets/baileys": "github:Jeliostarr/DEV-Baileys",
     "express-session": "^1.18.2",
+    "@dark-yasiya/yt-dl.js": "1.0.5",
+    "@xaviabot/fb-downloader": "latest",
     "adm-zip": "^0.5.16",
     "axios": "^1.2.5",
     "child_process": "^1.0.2",
