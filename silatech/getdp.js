@@ -1,43 +1,55 @@
-const { cmd, footer, formatMessage } = require('../sila/silafunctions');
+const { cmd, footer, getContextInfo } = require('../sila/silafunctions');
 
 module.exports = cmd({
     pattern: "getdp",
-    alias: ["dp", "profilepic", "pp"],
+    alias: ["dp", "pp", "profilepic", "getpp"],
     react: "🖼️",
-    desc: "Get user's display picture",
+    desc: "Get profile picture of a user or group",
     category: "tools",
     filename: __filename
 }, async (sock, m, sender, args, prefix, number) => {
+    
     try {
-        let targetJid;
-        let profileName = "User";
-
-        if (m.message.extendedTextMessage?.contextInfo?.participant) {
-            targetJid = m.message.extendedTextMessage.contextInfo.participant;
-            profileName = "Replied User";
-        } else if (m.message.extendedTextMessage?.contextInfo?.mentionedJid?.length > 0) {
-            targetJid = m.message.extendedTextMessage.contextInfo.mentionedJid[0];
-            profileName = "Mentioned User";
-        } else {
-            targetJid = sender;
-            profileName = "Your";
+        // Determine whose DP to get
+        let target;
+        
+        // Check for mentioned user
+        if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
+            target = m.message.extendedTextMessage.contextInfo.mentionedJid[0];
+        } 
+        // Check for replied message
+        else if (m.message?.extendedTextMessage?.contextInfo?.participant) {
+            target = m.message.extendedTextMessage.contextInfo.participant;
+        } 
+        // Default to chat/group
+        else {
+            target = sender;
         }
-
-        const ppUrl = await sock.profilePictureUrl(targetJid, 'image').catch(() => null);
-        if (!ppUrl) return await sock.sendMessage(sender, { text: `*❌ No profile picture found for ${profileName}*` }, { quoted: require('../sila/silafunctions').myquoted });
-
+        
+        // Fetch profile picture
+        let ppUrl;
+        try {
+            ppUrl = await sock.profilePictureUrl(target, 'image');
+        } catch (e) {
+            return await sock.sendMessage(sender, {
+                text: `❌ *NO PROFILE PICTURE*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Could not fetch profile picture\n◈🌸 It might be private or not set\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                contextInfo: getContextInfo(sender)
+            }, { quoted: m });
+        }
+        
+        // Send profile picture
         await sock.sendMessage(sender, {
             image: { url: ppUrl },
-            caption: `🌸 *PROFILE DOWNLOADER* 🌸
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-◈🌸 ${profileName} Profile Picture
-◈🌸 JID: ${targetJid}
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`
-        }, { quoted: require('../sila/silafunctions').myquoted });
-
+            caption: `🖼️ *PROFILE PICTURE*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 *User:* @${target.split('@')[0]}\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+            mentions: [target],
+            contextInfo: getContextInfo(sender)
+        }, { quoted: m });
+        
     } catch (error) {
-        console.error('❌ GetDP error:', error);
-        await sock.sendMessage(sender, { text: '*❌ Failed to get profile picture*' }, { quoted: require('../sila/silafunctions').myquoted });
+        console.error("GetDP Error:", error);
+        await sock.sendMessage(sender, {
+            text: `❌ *ERROR*\n◈━◈━◈◈━◈━◈━◈━◈━◈━\n◈🌸 Failed to fetch profile picture\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+            contextInfo: getContextInfo(sender)
+        }, { quoted: m });
     }
 });
