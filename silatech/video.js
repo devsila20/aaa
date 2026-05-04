@@ -1,87 +1,130 @@
-const { cmd, footer, loadUserConfig, getContextInfo } = require('../sila/silafunctions');
+const { cmd, footer, getContextInfo } = require('../sila/silafunctions');
+const axios = require('axios');
 const yts = require('yt-search');
-
-const apikey = "dew_hFjyfoUDx5IFFLDMU9ljc3DEaDCCC9niVbWG78KU";
 
 module.exports = cmd({
     pattern: "video",
-    alias: ["ytmp4", "ytvideo", "vid"],
-    react: "🎬",
-    desc: "Download YouTube video",
-    category: "downloader",
+    alias: ["ytmp4", "mp4", "ytv", "silavideo"],
+    react: "🎥",
+    desc: "Download YouTube videos",
+    category: "download",
     filename: __filename
 }, async (sock, m, sender, args, prefix, number) => {
-    const userConfig = await loadUserConfig(number);
-    const useButton = userConfig.BUTTON === 'true';
-
-    await sock.sendMessage(sender, { react: { text: '🎥', key: m.key } });
-
-    function extractYouTubeId(url) {
-        const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
-        const match = url.match(regex);
-        return match ? match[1] : null;
+    
+    const query = args.join(' ');
+    
+    if (!query) {
+        return await sock.sendMessage(sender, {
+            text: `🎥 *VIDEO DOWNLOADER*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Please provide a video name or link\n◈🌸 Example: ${prefix}video Cristiano Ronaldo Goal\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+            contextInfo: getContextInfo(sender)
+        }, { quoted: m });
     }
-    function convertYouTubeLink(input) {
-        const videoId = extractYouTubeId(input);
-        return videoId ? `https://www.youtube.com/watch?v=${videoId}` : input;
-    }
-
-    const q = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
-    if (!q || q.trim() === '') return await sock.sendMessage(sender, { text: '*Need YouTube URL or Title*' });
-
-    const fixedQuery = convertYouTubeLink(q.trim());
-
+    
     try {
-        const search = await yts(fixedQuery);
-        const data = search.videos[0];
-        if (!data) return await sock.sendMessage(sender, { text: '*No results found*' });
-
-        const url = data.url;
-        const desc = `🌸 *VIDEO DOWNLOADER* 🌸
-◈━◈━◈━◈━◈━◈━◈━◈━◈━
-◈🌸 *Title:* ${data.title}
-◈🌸 *Duration:* ${data.timestamp}
-◈🌸 *Views:* ${data.views}
-◈🌸 *Release:* ${data.ago}
-◈━◈━◈━◈━◈━◈━◈━◈━◈━`;
-
-        if (useButton) {
-            const buttons = [
-                { buttonId: `${prefix}downloadvid ${url}`, buttonText: { displayText: 'Download Video' }, type: 1 },
-                { buttonId: `${prefix}downloaddoc ${url}`, buttonText: { displayText: 'Download Document' }, type: 1 },
-            ];
-            await sock.sendMessage(sender, { image: { url: data.thumbnail }, caption: `${desc}\n${footer}`, footer: 'Click to download', buttons, headerType: 4 }, { quoted: m });
-        } else {
-            const selection = `🔢 Reply below number\n\n1 │❯❯◦ Video File 🎶\n2 │❯❯◦ Document File 📂\n\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`;
-            const VidMsg = await sock.sendMessage(sender, { image: { url: data.thumbnail }, caption: `${desc}\n${selection}`, contextInfo: getContextInfo(sender) }, { quoted: require('../sila/silafunctions').myquoted });
-
-            const res = await fetch(`https://api.srihub.store/download/ytmp4?apikey=${apikey}&url=${url}`);
-            const deta = await res.json();
-            if (!deta.success || !deta.result.download_url) return await sock.sendMessage(sender, { text: "❌ Download Failed. Try again later." });
-
-            let downloadUrl = deta.result.download_url;
-
-            sock.ev.on('messages.upsert', async (mUpdate) => {
-                const rMsg = mUpdate.messages[0];
-                if (!rMsg.message?.extendedTextMessage) return;
-                if (rMsg.message.extendedTextMessage.contextInfo?.stanzaId !== VidMsg.key.id) return;
-                const selected = rMsg.message.extendedTextMessage.text.trim();
-
-                if (selected === '1') {
-                    await sock.sendMessage(sender, { react: { text: '⬇️', key: m.key } });
-                    await sock.sendMessage(sender, { video: { url: downloadUrl }, mimetype: "video/mp4", caption: `${footer}` }, { quoted: m });
-                    await sock.sendMessage(sender, { react: { text: '✅', key: m.key } });
-                } else if (selected === '2') {
-                    await sock.sendMessage(sender, { react: { text: '⬇️', key: m.key } });
-                    await sock.sendMessage(sender, { document: { url: downloadUrl }, mimetype: "video/mp4", fileName: data.title + ".mp4", caption: `${footer}` }, { quoted: m });
-                    await sock.sendMessage(sender, { react: { text: '✅', key: m.key } });
-                } else {
-                    await sock.sendMessage(sender, { text: '❌ Invalid option. Please select 1 or 2.' }, { quoted: m });
-                }
-            });
+        // Search YouTube
+        const search = await yts(query);
+        
+        if (!search.videos || search.videos.length === 0) {
+            return await sock.sendMessage(sender, {
+                text: `❌ *NO VIDEOS FOUND*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Could not find any videos for "${query}"\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                contextInfo: getContextInfo(sender)
+            }, { quoted: m });
         }
-    } catch (err) {
-        console.error(err);
-        await sock.sendMessage(sender, { text: "*❌ Error occurred while fetching video info*" });
+        
+        const videoData = search.videos[0];
+        const ytUrl = videoData.url;
+        
+        // Fetch download link
+        const api = `https://gtech-api-xtp1.onrender.com/api/video/yt?apikey=APIKEY&url=${encodeURIComponent(ytUrl)}`;
+        const response = await axios.get(api);
+        const apiRes = response.data;
+        
+        if (!apiRes?.status || !apiRes.result?.media?.video_url) {
+            return await sock.sendMessage(sender, {
+                text: `❌ *DOWNLOAD FAILED*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Video download failed. Please try again.\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                contextInfo: getContextInfo(sender)
+            }, { quoted: m });
+        }
+        
+        const result = apiRes.result.media;
+        
+        // Send info with options
+        const caption = `🎥 *VIDEO FOUND*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 *Title:* ${videoData.title}\n◈🌸 *Views:* ${videoData.views}\n◈🌸 *Duration:* ${videoData.timestamp}\n◈🌸 *URL:* ${videoData.url}\n\n◈🎬 *Reply with:*\n◈🌸 1 - Simple Video\n◈🌸 2 - Document File\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`;
+        
+        const sentMsg = await sock.sendMessage(sender, {
+            image: { url: result.thumbnail || videoData.thumbnail },
+            caption: caption,
+            contextInfo: getContextInfo(sender)
+        }, { quoted: m });
+        
+        const messageID = sentMsg.key.id;
+        
+        // Reply handler
+        const messageHandler = async (msgData) => {
+            if (!msgData.messages) return;
+            
+            const receivedMsg = msgData.messages[0];
+            if (!receivedMsg?.message) return;
+            
+            const receivedText = receivedMsg.message.conversation || receivedMsg.message.extendedTextMessage?.text;
+            const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+            const replySender = receivedMsg.key.remoteJid;
+            
+            if (isReplyToBot && replySender === sender) {
+                const choice = receivedText.trim();
+                
+                try {
+                    if (choice === "1") {
+                        // Send as video
+                        await sock.sendMessage(sender, {
+                            video: { url: result.video_url },
+                            mimetype: "video/mp4",
+                            caption: `🎥 *${videoData.title}*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                            contextInfo: getContextInfo(sender)
+                        }, { quoted: receivedMsg });
+                        
+                    } else if (choice === "2") {
+                        // Send as document
+                        await sock.sendMessage(sender, {
+                            document: { url: result.video_url },
+                            mimetype: "video/mp4",
+                            fileName: `${videoData.title.substring(0, 50).replace(/[^\w\s]/gi, '')}.mp4`,
+                            caption: `🎥 *${videoData.title}*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                            contextInfo: getContextInfo(sender)
+                        }, { quoted: receivedMsg });
+                        
+                    } else {
+                        await sock.sendMessage(sender, {
+                            text: `❌ *INVALID CHOICE*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Please reply with 1 or 2\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                            contextInfo: getContextInfo(sender)
+                        }, { quoted: receivedMsg });
+                    }
+                } catch (err) {
+                    console.error("Video send error:", err.message);
+                    await sock.sendMessage(sender, {
+                        text: `❌ *SEND FAILED*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Failed to send video\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+                        contextInfo: getContextInfo(sender)
+                    }, { quoted: receivedMsg });
+                }
+                
+                // Remove listener
+                sock.ev.off('messages.upsert', messageHandler);
+            }
+        };
+        
+        // Add listener
+        sock.ev.on('messages.upsert', messageHandler);
+        
+        // Auto remove after 60 seconds
+        setTimeout(() => {
+            sock.ev.off('messages.upsert', messageHandler);
+        }, 60000);
+        
+    } catch (error) {
+        console.error("Video Error:", error.message);
+        await sock.sendMessage(sender, {
+            text: `❌ *ERROR*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Video download failed!\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+            contextInfo: getContextInfo(sender)
+        }, { quoted: m });
     }
 });
