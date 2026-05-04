@@ -9,31 +9,56 @@ module.exports = cmd({
     category: "ai",
     filename: __filename
 }, async (sock, m, sender, args, prefix, number) => {
+    
+    const query = args.join(' ');
+    
+    if (!query) {
+        return await sock.sendMessage(sender, {
+            text: `🤖 *AI CHAT*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 Please ask a question\n◈🌸 Example: ${prefix}ai What is python?\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`
+        }, { quoted: m });
+    }
+    
     try {
-        if (!args[0]) {
-            return await sock.sendMessage(sender, {
-                text: '*❌ Please provide a message*\n*Usage:* .ai Hello, how are you?'
-            }, { quoted: require('../sila/silafunctions').myquoted });
-        }
-
-        const query = args.join(' ');
-        await sock.sendMessage(sender, { react: { text: '🤖', key: m.key } });
-
-        const response = await axios.get(`https://apis.davidcyriltech.my.id/ai/chatbot?query=${encodeURIComponent(query)}`);
+        // Show typing
+        await sock.sendPresenceUpdate('composing', sender);
         
-        if (response.data.status !== 200 || !response.data.success) {
-            throw new Error('AI service unavailable');
+        // Call AI API
+        const response = await axios.get(`https://api.yupra.my.id/api/ai/gpt5?text=${encodeURIComponent(query)}`);
+        
+        if (!response.data) {
+            throw new Error('No response from API');
         }
-
+        
+        let aiResponse = response.data.response || response.data.result || response.data.data || 'No response';
+        
+        // Truncate if too long
+        if (aiResponse.length > 4000) {
+            aiResponse = aiResponse.substring(0, 3990) + '...';
+        }
+        
+        await sock.sendPresenceUpdate('paused', sender);
+        
         await sock.sendMessage(sender, {
-            text: `🌸 *AI Response* 🌸\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n\n${response.data.result}\n\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n> 𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐛𝐲 𝐒𝐢𝐥𝐚 𝐓𝐞𝐜𝐡`,
+            text: `🤖 *AI RESPONSE*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 *Question:* ${query}\n◈🌸 *Answer:*\n\n${aiResponse}\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
             contextInfo: getContextInfo(sender)
-        }, { quoted: require('../sila/silafunctions').myquoted });
-
+        }, { quoted: m });
+        
     } catch (error) {
-        console.error('❌ AI error:', error);
+        await sock.sendPresenceUpdate('paused', sender);
+        
+        let errorMsg = 'AI service unavailable';
+        
+        if (error.response?.status === 429) {
+            errorMsg = 'Rate limited, try again later';
+        } else if (error.response?.status === 500) {
+            errorMsg = 'AI server error';
+        } else if (error.code === 'ECONNABORTED') {
+            errorMsg = 'Request timeout';
+        }
+        
         await sock.sendMessage(sender, {
-            text: `*❌ AI Error*\n\nFailed to get response. Please try again.`
-        }, { quoted: require('../sila/silafunctions').myquoted });
+            text: `❌ *ERROR*\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n◈🌸 ${errorMsg}\n◈━◈━◈━◈━◈━◈━◈━◈━◈━\n${footer}`,
+            contextInfo: getContextInfo(sender)
+        }, { quoted: m });
     }
 });
