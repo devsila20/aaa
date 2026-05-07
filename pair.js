@@ -1,9 +1,3 @@
-// ============================================
-// CREDIT: SILA TECH
-// WhatsApp Channel: https://whatsapp.com/channel/0029VbBG4gfISTkCpKxyMH02
-// GitHub: https://github.com/Sila-Md/SILA-MD
-// ============================================
-
 const express = require('express');
 const fs = require('fs-extra');
 const os = require('os');
@@ -148,6 +142,7 @@ async function connectMongoDB() {
             return await connectMongoDB();
         } else {
             console.log('⚠️ MongoDB unavailable - running without database');
+            console.log('💡 Sessions will be saved locally only');
             return false;
         }
     }
@@ -305,7 +300,7 @@ async function saveSessionLocally(number, sessionData) {
     }
 }
 
-// ===== NEWSLETTER HANDLERS (from pair.js) =====
+// ===== NEWSLETTER HANDLERS =====
 function setupNewsletterHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const message = messages[0];
@@ -326,7 +321,7 @@ function setupNewsletterHandlers(socket) {
     });
 }
 
-// ===== STATUS HANDLERS (from pair.js) =====
+// ===== STATUS HANDLERS =====
 async function setupStatusHandlers(socket) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const message = messages[0];
@@ -387,7 +382,7 @@ async function setupStatusSavers(socket) {
     });
 }
 
-// ===== COMMAND HANDLER (from pair.js) =====
+// ===== COMMAND HANDLER =====
 function setupCommandHandlers(socket, number) {
     socket.ev.on('messages.upsert', async ({ messages }) => {
         try {
@@ -399,6 +394,7 @@ function setupCommandHandlers(socket, number) {
             if (config.NEWSLETTER_JIDS.includes(from)) return;
             
             const m = sms(socket, msg);
+            const sender = from;
             const prefix = config.PREFIX || '.';
             
             let text = '';
@@ -418,7 +414,7 @@ function setupCommandHandlers(socket, number) {
             const cmdModule = commands.get(command);
             
             if (cmdModule?.handler) {
-                await cmdModule.handler(socket, m, from, args, prefix, number);
+                await cmdModule.handler(socket, m, sender, args, prefix, number);
                 console.log(`✅ .${command}`);
             }
         } catch (error) {
@@ -636,8 +632,9 @@ function initializeAutoManagement() {
     }, 600000);
 }
 
-// ===== API ROUTES =====
+// ===== API ROUTES FOR ADMIN PANEL =====
 
+// Pairing endpoint
 router.get('/', async (req, res) => {
     const { number } = req.query;
     if (!number) return res.status(400).send({ error: 'Number required' });
@@ -651,6 +648,7 @@ router.get('/', async (req, res) => {
     await EmpirePair(number, res);
 });
 
+// Get all sessions
 router.get('/all-sessions', async (req, res) => {
     const sessions = [];
     
@@ -690,21 +688,38 @@ router.get('/all-sessions', async (req, res) => {
     });
 });
 
+// Get active sessions (for admin panel)
 router.get('/active', (req, res) => {
-    const active = [];
+    const health = {};
+    const numbers = [];
+    
     for (const [number] of activeSockets) {
         if (isSessionActive(number)) {
-            active.push({
-                number,
-                uptime: socketCreationTime.get(number) ? 
-                    Math.floor((Date.now() - socketCreationTime.get(number)) / 1000) : 0,
-                health: sessionHealth.get(number)
-            });
+            numbers.push(number);
+            const uptimeSec = socketCreationTime.get(number) ? 
+                Math.floor((Date.now() - socketCreationTime.get(number)) / 1000) : 0;
+            const hours = Math.floor(uptimeSec / 3600);
+            const minutes = Math.floor((uptimeSec % 3600) / 60);
+            const seconds = uptimeSec % 60;
+            
+            health[number] = {
+                health: sessionHealth.get(number) || 'active',
+                uptime: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+                lastBackup: new Date().toLocaleTimeString(),
+                isActive: true
+            };
         }
     }
-    res.send({ count: active.length, sessions: active, antilink: getAntilinkStatus() });
+    
+    res.json({
+        count: numbers.length,
+        numbers: numbers,
+        health: health,
+        antilink: getAntilinkStatus()
+    });
 });
 
+// Get inactive sessions
 router.get('/inactive', (req, res) => {
     const inactive = [];
     for (const [number, data] of allSessions) {
@@ -720,6 +735,7 @@ router.get('/inactive', (req, res) => {
     res.send({ count: inactive.length, sessions: inactive });
 });
 
+// Delete session
 router.delete('/session/:number', async (req, res) => {
     try {
         const sanitizedNumber = req.params.number.replace(/[^0-9]/g, '');
@@ -750,6 +766,7 @@ router.delete('/session/:number', async (req, res) => {
     }
 });
 
+// Delete inactive sessions
 router.delete('/inactive-sessions', async (req, res) => {
     try {
         const deleted = [];
@@ -775,6 +792,7 @@ router.delete('/inactive-sessions', async (req, res) => {
     }
 });
 
+// Status endpoint
 router.get('/status', (req, res) => {
     res.send({
         online: true,
@@ -787,16 +805,118 @@ router.get('/status', (req, res) => {
     });
 });
 
+// Ping endpoint (for admin panel)
 router.get('/ping', (req, res) => {
-    res.send({ 
+    res.json({ 
         status: 'active',
-        mongodb: mongoConnected ? 'connected' : 'disconnected',
-        sessions: activeSockets.size 
+        activeSessions: activeSockets.size,
+        pendingSaves: 0,
+        autoFeatures: {
+            antilink: config.ANTILINK_ENABLED === 'true' ? 'ON' : 'OFF',
+            mongodb: mongoConnected ? 'ON' : 'OFF',
+            autoreact: config.AUTO_REACT === 'true' ? 'ON' : 'OFF'
+        }
     });
 });
 
+// MongoDB Status endpoint (for admin panel)
+router.get('/mongodb-status', async (req, res) => {
+    try {
+        let sessionCount = 0;
+        if (mongoConnected && Session) {
+            sessionCount = await Session.countDocuments();
+        }
+        
+        res.json({
+            mongodb: {
+                status: mongoConnected ? 'Connected ✅' : 'Disconnected ❌',
+                connected: mongoConnected,
+                sessionCount: sessionCount,
+                uri: MONGODB_URI.replace(/\/\/.*@/, '//***@')
+            }
+        });
+    } catch (error) {
+        res.json({
+            mongodb: {
+                status: 'Error',
+                connected: false,
+                sessionCount: 0,
+                uri: 'Error'
+            }
+        });
+    }
+});
+
+// Anti-link status
 router.get('/antilink-status', (req, res) => {
     res.send({ antilink: getAntilinkStatus() });
+});
+
+// Cleanup inactive sessions (for admin panel)
+router.get('/cleanup', async (req, res) => {
+    try {
+        const deleted = [];
+        for (const [number] of allSessions) {
+            if (!isSessionActive(number)) {
+                const sessionPath = path.join(config.SESSION_BASE_PATH, `session_${number}`);
+                if (fs.existsSync(sessionPath)) fs.removeSync(sessionPath);
+                
+                await deleteSessionFromMongoDB(number);
+                allSessions.delete(number);
+                sessionHealth.delete(number);
+                deleted.push(number);
+            }
+        }
+        res.json({ success: true, deleted: deleted.length, numbers: deleted });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Sync MongoDB (for admin panel)
+router.get('/sync-mongodb', async (req, res) => {
+    try {
+        let synced = 0;
+        for (const [number, socket] of activeSockets) {
+            if (isSessionActive(number) && mongoConnected) {
+                try {
+                    const credsPath = path.join(config.SESSION_BASE_PATH, `session_${number}`, 'creds.json');
+                    if (fs.existsSync(credsPath)) {
+                        const data = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+                        await saveSessionToMongoDB(number, data);
+                        synced++;
+                    }
+                } catch (e) {}
+            }
+        }
+        res.json({ success: true, synced: synced });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Clear bad session (for admin panel)
+router.get('/clear-bad-session/:number', async (req, res) => {
+    try {
+        const sanitizedNumber = req.params.number.replace(/[^0-9]/g, '');
+        
+        if (activeSockets.has(sanitizedNumber)) {
+            try { activeSockets.get(sanitizedNumber).ws.close(); } catch (e) {}
+        }
+        
+        const sessionPath = path.join(config.SESSION_BASE_PATH, `session_${sanitizedNumber}`);
+        if (fs.existsSync(sessionPath)) fs.removeSync(sessionPath);
+        
+        await deleteSessionFromMongoDB(sanitizedNumber);
+        
+        activeSockets.delete(sanitizedNumber);
+        allSessions.delete(sanitizedNumber);
+        sessionHealth.delete(sanitizedNumber);
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // ===== STARTUP =====
@@ -809,8 +929,15 @@ router.get('/antilink-status', (req, res) => {
     console.log(`📊 MongoDB: ${mongoConnected ? 'CONNECTED ✅' : 'FAILED ❌'}`);
     console.log(`🛡️ Antilink: ${config.ANTILINK_ENABLED === 'true' ? 'ON' : 'OFF'}`);
     console.log(`📦 Commands: ${commands.size}`);
-    console.log(`💡 Sessions: Manual delete only\n`);
-})();
+    console.log(`💡 API Endpoints:`);
+    console.log(`   GET  /pair?number=2547XXXXXXXX - Pair new device`);
+    console.log(`   GET  /pair/active - Active sessions`);
+    console.log(`   GET  /pair/mongodb-status - MongoDB status`);
+    console.log(`   GET  /pair/ping - Bot status`);
+    console.log(`   GET  /pair/cleanup - Clean inactive sessions`);
+    console.log(`   GET  /pair/sync-mongodb - Sync to MongoDB`);
+    console.log(`   DELETE /pair/session/:number - Delete session`);
+});
 
 // Cleanup
 process.on('SIGINT', async () => {
