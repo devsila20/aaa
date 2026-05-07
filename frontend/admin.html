@@ -8,7 +8,6 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
 
-/* Reset & Base */
 *, *::before, *::after { box-sizing: border-box; }
 body { margin:0; padding:0; font-family:'Inter',sans-serif; background:#0a0a0a; color:#e0e0e0; overflow-x:hidden; position:relative; }
 body::before {
@@ -21,126 +20,49 @@ body::before {
 }
 @keyframes rotate {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
 
-/* Container */
 .container { max-width:1100px; margin:0 auto; padding:2rem 1rem; }
 
-/* Header */
-header { display:flex; justify-content:space-between; align-items:center; padding:1.5rem 0; }
+header { display:flex; justify-content:space-between; align-items:center; padding:1.5rem 0; flex-wrap:wrap; gap:1rem; }
 .logo { font-weight:900; font-size:1.8rem; color:#4488ff; letter-spacing:2px; user-select:none; text-transform:uppercase; text-shadow:0 0 8px #4488ff55; }
 nav a { color:#8899bb; margin-left:2rem; font-weight:600; text-decoration:none; position:relative; transition:color 0.3s ease; }
 nav a:hover, nav a.active { color:#4488ff; }
 nav a::after { content:''; position:absolute; left:0; bottom:-6px; width:0; height:2px; background:#4488ff; transition:width 0.3s ease; }
 nav a:hover::after, nav a.active::after { width:100%; }
 
-/* Login Overlay */
-#login-overlay {
-  position: fixed; top:0; left:0; width:100%; height:100%;
-  background: rgba(10,10,26,0.95);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 9999;
-  backdrop-filter: blur(10px);
-}
-.login-card {
-  background: #141428;
-  padding: 40px 30px;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 380px;
-  text-align: center;
-  box-shadow: 0 0 20px #0066ff33, 0 0 40px #0044ff11;
-  border: 1px solid rgba(0,100,255,0.3);
-  animation: float 6s ease-in-out infinite;
-}
-@keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
-.login-card h2 {
-  color: #4488ff;
-  font-size: 1.8rem;
-  margin-bottom: 10px;
-  text-shadow: 0 0 15px #4488ff88;
-}
-.login-card p {
-  color: #8899bb;
-  margin-bottom: 25px;
-  font-size: 0.95rem;
-}
-.login-card input {
-  width: 100%;
-  padding: 12px 15px;
-  border-radius: 35px;
-  border: 2px solid #3355aa55;
-  background: #0a0a1a;
-  color: #e0e0e0;
-  font-size: 1rem;
-  outline: none;
-  margin-bottom: 15px;
-  transition: all 0.3s ease;
-}
-.login-card input:focus {
-  border-color: #4488ff;
-  box-shadow: 0 0 15px #4488ff33;
-}
-.login-card button {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #4488ff;
-  background: transparent;
-  color: #4488ff;
-  font-weight: 700;
-  font-size: 1.1rem;
-  border-radius: 35px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 10px #4488ff44;
-}
-.login-card button:hover {
-  background: #4488ff;
-  color: #0a0a0a;
-  box-shadow: 0 0 25px #4488ff88, 0 0 50px #2266ff33;
-}
-.login-error {
-  color: #ff4d4d;
-  font-size: 0.85rem;
-  margin-top: 10px;
-  display: none;
-}
-
-/* Hero */
-.hero { min-height:25vh; display:flex; flex-direction:column; justify-content:center; text-align:center; user-select:none; }
+.hero { min-height:25vh; display:flex; flex-direction:column; justify-content:center; text-align:center; }
 .hero h1 { font-size:2.5rem; font-weight:900; margin-bottom:1rem; letter-spacing:2px; text-shadow:0 0 10px #4488ff88; }
 .hero p { font-weight:500; font-size:1.1rem; margin-bottom:2rem; color:#8899bb; }
-.btn { padding:1rem 2rem; margin:0.5rem; border:2px solid #4488ff; background:transparent; color:#4488ff; font-weight:700; font-size:1rem; border-radius:35px; cursor:pointer; transition:all 0.3s ease; box-shadow:0 0 10px #4488ff55; display:inline-flex; align-items:center; gap:0.5rem; }
+
+.btn { padding:0.8rem 1.5rem; margin:0.5rem; border:2px solid #4488ff; background:transparent; color:#4488ff; font-weight:700; font-size:0.9rem; border-radius:35px; cursor:pointer; transition:all 0.3s ease; box-shadow:0 0 10px #4488ff55; display:inline-flex; align-items:center; gap:0.5rem; }
 .btn:hover { background:#4488ff; color:#0a0a0a; box-shadow:0 0 30px #4488ff; }
-.btn svg { stroke-width:2; stroke:currentColor; width:20px; height:20px; transition:transform 0.3s ease; }
+.btn svg { stroke-width:2; stroke:currentColor; width:18px; height:18px; transition:transform 0.3s ease; }
 .btn:hover svg { transform:translateX(6px); }
 
-/* Dashboard Cards */
 .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:2rem; margin-bottom:2rem; }
 .card { background:#141428; padding:1.5rem; border-radius:20px; box-shadow:0 0 15px #0066ff22; transition:transform 0.3s ease, box-shadow 0.3s ease; }
 .card:hover { transform:translateY(-5px); box-shadow:0 0 35px #4488ffaa; }
 .card h2 { margin-top:0; font-size:1.3rem; margin-bottom:1rem; color: #4488ff; }
-.card p { margin:5px 0; color: #8899bb; }
+.card p { margin:8px 0; color: #8899bb; }
 
-/* Table */
 table { width:100%; border-collapse:collapse; background:#141428; border-radius:10px; overflow:hidden; }
-th, td { padding:10px 12px; text-align:left; color: #e0e0e0; }
-th { background:#1a1a3a; color: #4488ff; }
+th, td { padding:12px 15px; text-align:left; color: #e0e0e0; }
+th { background:#1a1a3a; color: #4488ff; font-weight:700; }
 tr:nth-child(even){ background:#1a1a3a; }
+tr:hover { background:#1f1f4a; }
 
-/* Buttons */
-button { border:none; padding:5px 10px; border-radius:6px; cursor:pointer; transition:0.2s; }
-button:hover { opacity:0.85; }
+button.small-btn { border:none; padding:5px 12px; border-radius:6px; cursor:pointer; transition:0.2s; margin:0 3px; font-size:0.85rem; }
 .btn-danger { background:#f44336; color:white; }
-.btn-action { background:#4488ff; color:#0a0a0a; font-weight: 700; }
+.btn-warning { background:#ff9800; color:white; }
+.btn-info { background:#4488ff; color:white; }
 
-/* Footer */
-footer { text-align:center; padding:2rem 1rem; font-weight:500; color:#556677; user-select:none; letter-spacing:1.1px; border-top:1px solid #1a1a3a; }
+footer { text-align:center; padding:2rem 1rem; font-weight:500; color:#556677; user-select:none; letter-spacing:1.1px; border-top:1px solid #1a1a3a; margin-top:2rem; }
 footer .owner { color:#4488ff; font-weight:700; }
 
-/* Status colors */
-.status-connected { color: #44ff88; }
-.status-disconnected { color: #ff4444; }
+.status-connected { color: #44ff88; font-weight:700; }
+.status-disconnected { color: #ff4444; font-weight:700; }
+.status-active { color: #44ff88; }
+.status-inactive { color: #ffaa44; }
 
-/* Logout button */
 .logout-btn {
   position: fixed;
   top: 20px;
@@ -160,61 +82,63 @@ footer .owner { color:#4488ff; font-weight:700; }
   box-shadow: 0 0 15px #4488ff55;
 }
 
-/* Hidden class */
-.hidden { display: none !important; }
+.loading { text-align:center; padding:20px; color:#8899bb; }
+.refresh-btn {
+  background: #4488ff22;
+  border: 1px solid #4488ff;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.refresh-btn:hover { background:#4488ff44; }
 </style>
 </head>
 <body>
 
-<!-- Login Overlay -->
-<div id="login-overlay">
-  <div class="login-card">
-    <h2><i class="fas fa-lock"></i> 𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸</h2>
-    <p>Admin Access Required</p>
-    <input type="password" id="admin-password" placeholder="Enter password..." onkeypress="if(event.key==='Enter')login()">
-    <button onclick="login()"><i class="fas fa-sign-in-alt"></i> Login</button>
-    <div class="login-error" id="login-error"><i class="fas fa-exclamation-circle"></i> Wrong password!</div>
-  </div>
-</div>
+<!-- Logout Button -->
+<button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
 
-<!-- Main Content (Hidden until login) -->
-<div id="main-content" class="hidden">
-  <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+<header class="container">
+  <div class="logo">𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 Admin</div>
+  <nav>
+    <a href="#dashboard" class="active">Dashboard</a>
+    <a href="#sessions">Active Sessions</a>
+    <a href="#all-sessions">All Sessions</a>
+  </nav>
+</header>
 
-  <header class="container">
-    <div class="logo">𝚂𝙸𝙻𝙰 𝙼𝙸𝙽𝙸 Admin</div>
-    <nav>
-      <a href="#dashboard">Dashboard</a>
-      <a href="#sessions">Active Sessions</a>
-    </nav>
-  </header>
+<section id="dashboard" class="container hero">
+  <h1>Admin Dashboard</h1>
+  <p>Monitor all active sessions, MongoDB, and bot health in real-time.</p>
 
-  <section id="dashboard" class="container hero">
-    <h1>Admin Dashboard</h1>
-    <p>Monitor all active sessions, MongoDB, and bot health in real-time.</p>
-
-    <div class="cards">
-      <div class="card">
-        <h2><i class="fas fa-database"></i> MongoDB Status</h2>
-        <p>Status: <span id="mongo-status">Loading...</span></p>
-        <p>Connected: <span id="mongo-connected">Loading...</span></p>
-        <p>Session Count: <span id="mongo-sessions">Loading...</span></p>
-        <p>URI: <span id="mongo-uri">Loading...</span></p>
-        <button class="btn btn-action" onclick="syncMongo()"><i class="fas fa-sync"></i> Sync MongoDB</button>
-      </div>
-      <div class="card">
-        <h2><i class="fas fa-robot"></i> Auto Session Manager</h2>
-        <p>Status: <span id="auto-status">Loading...</span></p>
-        <p>Active Sessions: <span id="active-sessions">Loading...</span></p>
-        <p>Pending Saves: <span id="pending-saves">Loading...</span></p>
-        <p>Features: <span id="auto-features">Loading...</span></p>
-        <button class="btn btn-action" onclick="cleanupSessions()"><i class="fas fa-broom"></i> Cleanup Inactive</button>
-      </div>
+  <div class="cards">
+    <div class="card">
+      <h2><i class="fas fa-database"></i> MongoDB Status</h2>
+      <p>Status: <span id="mongo-status">Loading...</span></p>
+      <p>Connected: <span id="mongo-connected">Loading...</span></p>
+      <p>Session Count: <span id="mongo-sessions">Loading...</span></p>
+      <p>URI: <span id="mongo-uri">Loading...</span></p>
+      <button class="btn" onclick="syncMongo()"><i class="fas fa-sync-alt"></i> Sync to MongoDB</button>
     </div>
-  </section>
+    <div class="card">
+      <h2><i class="fas fa-robot"></i> Bot Status</h2>
+      <p>Status: <span id="bot-status">Loading...</span></p>
+      <p>Active Sessions: <span id="active-sessions">Loading...</span></p>
+      <p>Total Sessions: <span id="total-sessions">Loading...</span></p>
+      <p>Uptime: <span id="uptime">Loading...</span></p>
+      <p>Antilink: <span id="antilink-status">Loading...</span></p>
+      <button class="btn" onclick="cleanupSessions()"><i class="fas fa-broom"></i> Clean Inactive</button>
+    </div>
+  </div>
+</section>
 
-  <section id="sessions" class="container">
-    <h2 style="color: #4488ff; text-align: center; margin-bottom: 1.5rem;"><i class="fas fa-users"></i> Active Sessions</h2>
+<section id="sessions" class="container">
+  <h2 style="color: #4488ff; text-align: center; margin-bottom: 1.5rem;">
+    <i class="fas fa-plug"></i> Active Sessions 
+    <button class="refresh-btn" onclick="refreshAll()"><i class="fas fa-sync-alt"></i></button>
+  </h2>
+  <div style="overflow-x: auto;">
     <table>
       <thead>
         <tr>
@@ -227,156 +151,220 @@ footer .owner { color:#4488ff; font-weight:700; }
         </tr>
       </thead>
       <tbody id="sessions-table">
-        <tr><td colspan="6" style="text-align:center; color:#8899bb;">Loading...</td></tr>
+        <tr><td colspan="6" style="text-align:center;" class="loading">Loading sessions...</td></tr>
       </tbody>
     </table>
-  </section>
+  </div>
+</section>
 
-  <footer>
-    &copy; 2025 — DEVELOPED BY <br><span class="owner">𝚂𝙸𝙻𝙰 𝚃𝚎𝚌𝚑</span>
-  </footer>
-</div>
+<section id="all-sessions" class="container">
+  <h2 style="color: #4488ff; text-align: center; margin-bottom: 1.5rem;">
+    <i class="fas fa-database"></i> All Sessions (MongoDB)
+  </h2>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Number</th>
+          <th>Status</th>
+          <th>Last Active</th>
+          <th>Health</th>
+          <th>Source</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="all-sessions-table">
+        <tr><td colspan="6" style="text-align:center;" class="loading">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  &copy; 2025 — DEVELOPED BY <br><span class="owner">𝚂𝙸𝙻𝙰 𝚃𝚎𝚌𝚑</span>
+</footer>
 
 <script>
-// Admin Password
-const ADMIN_PASSWORD = "sila";
+// Base URL for API calls
+const API_BASE = '/pair';
 
-// Check if already logged in
-window.onload = function() {
-  if (localStorage.getItem('sila_admin_logged_in') === 'true') {
-    showMainContent();
-    refreshAll();
-  }
-};
-
-function login() {
-  const input = document.getElementById('admin-password').value;
-  const errorEl = document.getElementById('login-error');
-  
-  if (input === ADMIN_PASSWORD) {
-    localStorage.setItem('sila_admin_logged_in', 'true');
-    showMainContent();
-    refreshAll();
-  } else {
-    errorEl.style.display = 'block';
-    document.getElementById('admin-password').value = '';
-    document.getElementById('admin-password').focus();
-    
-    // Shake animation
-    const card = document.querySelector('.login-card');
-    card.style.animation = 'none';
-    setTimeout(() => {
-      card.style.animation = 'float 6s ease-in-out infinite';
-    }, 10);
-  }
-}
-
-function logout() {
-  localStorage.removeItem('sila_admin_logged_in');
-  location.reload();
-}
-
-function showMainContent() {
-  document.getElementById('login-overlay').classList.add('hidden');
-  document.getElementById('main-content').classList.remove('hidden');
-}
-
-async function fetchMongo() {
-  try {
-    const res = await fetch('/api/mongodb-status');
-    const data = await res.json();
-    document.getElementById('mongo-status').textContent = data.mongodb.status;
-    const connEl = document.getElementById('mongo-connected');
-    connEl.textContent = data.mongodb.connected ? 'Yes' : 'No';
-    connEl.className = data.mongodb.connected ? 'status-connected' : 'status-disconnected';
-    document.getElementById('mongo-sessions').textContent = data.mongodb.sessionCount;
-    document.getElementById('mongo-uri').textContent = data.mongodb.uri;
-  } catch(e) { console.error(e); }
-}
-
-async function fetchAuto() {
-  try {
-    const res = await fetch('/api/ping');
-    const data = await res.json();
-    document.getElementById('auto-status').textContent = data.status;
-    document.getElementById('active-sessions').textContent = data.activeSessions;
-    document.getElementById('pending-saves').textContent = data.pendingSaves;
-    const features = Object.entries(data.autoFeatures).map(([k,v])=>`${k}: ${v}`).join(', ');
-    document.getElementById('auto-features').textContent = features;
-  } catch(e){ console.error(e); }
-}
-
-async function fetchSessions() {
-  try {
-    const res = await fetch('/api/active');
-    const data = await res.json();
-    const tbody = document.getElementById('sessions-table');
-    tbody.innerHTML='';
-    if(data.numbers.length===0){
-      tbody.innerHTML='<tr><td colspan="6" style="text-align:center; color:#8899bb;">No active sessions</td></tr>';
-      return;
+async function fetchMongoStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/mongodb-status`);
+        const data = await res.json();
+        document.getElementById('mongo-status').textContent = data.mongodb.status;
+        const connEl = document.getElementById('mongo-connected');
+        connEl.textContent = data.mongodb.connected ? 'Yes ✅' : 'No ❌';
+        connEl.className = data.mongodb.connected ? 'status-connected' : 'status-disconnected';
+        document.getElementById('mongo-sessions').textContent = data.mongodb.sessionCount;
+        document.getElementById('mongo-uri').textContent = data.mongodb.uri;
+    } catch(e) { 
+        console.error(e);
+        document.getElementById('mongo-status').textContent = 'Error';
     }
-    data.numbers.forEach(num=>{
-      const session=data.health[num];
-      const uptime=new Date(session.uptime).toISOString().substr(11,8);
-      tbody.innerHTML+=`
-      <tr>
-        <td>${num}</td>
-        <td>${session.health}</td>
-        <td>${uptime}</td>
-        <td>${session.lastBackup||'N/A'}</td>
-        <td>${session.isActive?'Active':'Inactive'}</td>
-        <td>
-          <button class="btn-action" onclick="deleteSession('${num}')"><i class="fas fa-trash"></i></button>
-          <button class="btn-danger" onclick="clearBadSession('${num}')"><i class="fas fa-broom"></i></button>
-        </td>
-      </tr>`;
-    });
-  } catch(e){ console.error(e); }
 }
 
-async function deleteSession(number){
-  if(!confirm(`Delete session ${number}?`)) return;
-  await fetch(`/api/session/${number}`,{method:'DELETE'});
-  refreshAll();
+async function fetchBotStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/ping`);
+        const data = await res.json();
+        document.getElementById('bot-status').textContent = data.status === 'active' ? 'Online ✅' : 'Offline ❌';
+        document.getElementById('active-sessions').textContent = data.activeSessions || 0;
+        document.getElementById('antilink-status').textContent = data.autoFeatures?.antilink || 'OFF';
+    } catch(e) { console.error(e); }
 }
 
-async function clearBadSession(number){
-  if(!confirm(`Clear bad session ${number}?`)) return;
-  await fetch(`/api/clear-bad-session/${number}`);
-  refreshAll();
+async function fetchStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/status`);
+        const data = await res.json();
+        document.getElementById('total-sessions').textContent = data.totalSessions || 0;
+        document.getElementById('uptime').textContent = data.uptime || '0m 0s';
+    } catch(e) { console.error(e); }
 }
 
-async function syncMongo(){ 
-  const btn = event.target;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
-  await fetch('/api/sync-mongodb'); 
-  btn.innerHTML = '<i class="fas fa-sync"></i> Sync MongoDB';
-  refreshAll(); 
+async function fetchActiveSessions() {
+    try {
+        const res = await fetch(`${API_BASE}/active`);
+        const data = await res.json();
+        const tbody = document.getElementById('sessions-table');
+        
+        if(!data.numbers || data.numbers.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No active sessions</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        data.numbers.forEach(num => {
+            const session = data.health[num] || {};
+            tbody.innerHTML += `
+            <tr>
+                <td><strong>${num}</strong></td>
+                <td class="${session.health === 'active' ? 'status-connected' : 'status-disconnected'}">${session.health || 'unknown'}</td>
+                <td>${session.uptime || '0:00:00'}</td>
+                <td>${session.lastBackup || 'N/A'}</td>
+                <td class="${session.isActive ? 'status-connected' : 'status-inactive'}">${session.isActive ? 'Active' : 'Inactive'}</td>
+                <td>
+                    <button class="small-btn btn-danger" onclick="deleteSession('${num}')"><i class="fas fa-trash"></i> Delete</button>
+                    <button class="small-btn btn-warning" onclick="clearBadSession('${num}')"><i class="fas fa-bug"></i> Clear Bad</button>
+                </td>
+            </tr>`;
+        });
+    } catch(e) { 
+        console.error(e);
+        document.getElementById('sessions-table').innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Error loading sessions</td></tr>';
+    }
 }
 
-async function cleanupSessions(){ 
-  const btn = event.target;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
-  await fetch('/api/cleanup'); 
-  btn.innerHTML = '<i class="fas fa-broom"></i> Cleanup Inactive';
-  refreshAll(); 
+async function fetchAllSessions() {
+    try {
+        const res = await fetch(`${API_BASE}/all-sessions`);
+        const data = await res.json();
+        const tbody = document.getElementById('all-sessions-table');
+        
+        if(!data.sessions || data.sessions.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No sessions found</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        data.sessions.forEach(session => {
+            tbody.innerHTML += `
+            <tr>
+                <td><strong>${session.number}</strong></td>
+                <td class="${session.status === 'active' ? 'status-connected' : 'status-inactive'}">${session.status}</td>
+                <td>${session.lastActive ? new Date(session.lastActive).toLocaleString() : 'N/A'}</td>
+                <td class="${session.health === 'active' ? 'status-connected' : 'status-disconnected'}">${session.health}</td>
+                <td>${session.source === 'mongodb' ? 'MongoDB' : 'Memory'}</td>
+                <td>
+                    ${!session.isActive ? `<button class="small-btn btn-danger" onclick="deleteSession('${session.number}')"><i class="fas fa-trash"></i> Delete</button>` : ''}
+                </td>
+            </tr>`;
+        });
+    } catch(e) { 
+        console.error(e);
+        document.getElementById('all-sessions-table').innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Error loading sessions</td></tr>';
+    }
 }
 
-function refreshAll(){ fetchMongo(); fetchAuto(); fetchSessions(); }
+async function deleteSession(number) {
+    if(!confirm(`Delete session ${number}? This action cannot be undone!`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/session/${number}`, { method: 'DELETE' });
+        if(res.ok) {
+            alert(`Session ${number} deleted successfully`);
+            refreshAll();
+        } else {
+            alert('Failed to delete session');
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
 
-// Smooth nav highlighting
-const sections=document.querySelectorAll('section');
-const navLinks=document.querySelectorAll('nav a');
-window.addEventListener('scroll',()=>{
-  let current='';
-  sections.forEach(section=>{
-    const sectionTop=section.offsetTop-50;
-    if(pageYOffset>=sectionTop){ current=section.getAttribute('id'); }
-  });
-  navLinks.forEach(link=>{ link.classList.remove('active'); if(link.getAttribute('href')==='#'+current){ link.classList.add('active'); } });
-});
+async function clearBadSession(number) {
+    if(!confirm(`Clear bad session ${number}?`)) return;
+    try {
+        await fetch(`${API_BASE}/clear-bad-session/${number}`);
+        alert(`Bad session ${number} cleared`);
+        refreshAll();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function syncMongo() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+    btn.disabled = true;
+    try {
+        await fetch(`${API_BASE}/sync-mongodb`);
+        alert('Sessions synced to MongoDB successfully');
+        refreshAll();
+    } catch(e) {
+        alert('Sync failed: ' + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function cleanupSessions() {
+    if(!confirm('Clean up all inactive sessions?')) return;
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
+    btn.disabled = true;
+    try {
+        const res = await fetch(`${API_BASE}/cleanup`);
+        const data = await res.json();
+        alert(`Cleaned ${data.deleted || 0} inactive sessions`);
+        refreshAll();
+    } catch(e) {
+        alert('Cleanup failed: ' + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function refreshAll() {
+    fetchMongoStatus();
+    fetchBotStatus();
+    fetchStatus();
+    fetchActiveSessions();
+    fetchAllSessions();
+}
+
+// Auto refresh every 10 seconds
+setInterval(() => {
+    fetchActiveSessions();
+    fetchAllSessions();
+}, 10000);
+
+// Initial load
+refreshAll();
 </script>
-
 </body>
 </html>
